@@ -30,6 +30,7 @@ namespace StockSharp.Algo.Candles.Compression
 	using StockSharp.Algo.Storages;
 	using StockSharp.BusinessEntities;
 	using StockSharp.Localization;
+	using StockSharp.Messages;
 
 	/// <summary>
 	/// The base data source for <see cref="ICandleBuilder"/>, which receives data from the external storage.
@@ -98,10 +99,7 @@ namespace StockSharp.Algo.Candles.Compression
 
 				return _drive;
 			}
-			set
-			{
-				_drive = value;
-			}
+			set => _drive = value;
 		}
 
 		/// <summary>
@@ -134,7 +132,7 @@ namespace StockSharp.Algo.Candles.Compression
 		/// <param name="from">The initial date from which you need to get data.</param>
 		/// <param name="to">The final date by which you need to get data.</param>
 		/// <returns>Data. If data does not exist for the specified range then <see langword="null" /> will be returned.</returns>
-		protected virtual IEnumerable<TSourceValue> GetValues(CandleSeries series, DateTimeOffset from, DateTimeOffset to)
+		protected virtual IEnumerable<TSourceValue> GetValues(CandleSeries series, DateTimeOffset? from, DateTimeOffset? to)
 		{
 			var storage = GetStorage(series.Security);
 
@@ -152,7 +150,7 @@ namespace StockSharp.Algo.Candles.Compression
 		/// <param name="series">The candles series for which data receiving should be started.</param>
 		/// <param name="from">The initial date from which you need to get data.</param>
 		/// <param name="to">The final date by which you need to get data.</param>
-		public override void Start(CandleSeries series, DateTimeOffset from, DateTimeOffset to)
+		public override void Start(CandleSeries series, DateTimeOffset? from, DateTimeOffset? to)
 		{
 			if (series == null)
 				throw new ArgumentNullException(nameof(series));
@@ -303,13 +301,13 @@ namespace StockSharp.Algo.Candles.Compression
 	/// </summary>
 	public class MarketDepthStorageCandleBuilderSource : StorageCandleBuilderSource<MarketDepth>
 	{
-		private readonly DepthCandleSourceTypes _type;
+		private readonly Level1Fields _type;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="MarketDepthStorageCandleBuilderSource"/>.
 		/// </summary>
 		/// <param name="type">Type of candle depth based data.</param>
-		public MarketDepthStorageCandleBuilderSource(DepthCandleSourceTypes type)
+		public MarketDepthStorageCandleBuilderSource(Level1Fields type)
 		{
 			_type = type;
 		}
@@ -395,7 +393,7 @@ namespace StockSharp.Algo.Candles.Compression
 		/// <param name="from">The initial date from which you need to get data.</param>
 		/// <param name="to">The final date by which you need to get data.</param>
 		/// <returns>Data. If data does not exist for the specified range then <see langword="null" /> will be returned.</returns>
-		protected override IEnumerable<Trade> GetValues(CandleSeries series, DateTimeOffset from, DateTimeOffset to)
+		protected override IEnumerable<Trade> GetValues(CandleSeries series, DateTimeOffset? from, DateTimeOffset? to)
 		{
 			var storage = StorageRegistry.GetOrderLogStorage(series.Security, Drive);
 

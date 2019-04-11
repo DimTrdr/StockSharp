@@ -16,12 +16,11 @@ Copyright 2010 by StockSharp, LLC
 namespace StockSharp.Community
 {
 	using System;
+	using System.Linq;
 	using System.Threading;
 
 	using Ecng.Common;
-	using Ecng.Localization;
 
-	using StockSharp.Localization;
 	using StockSharp.Logging;
 
 	/// <summary>
@@ -36,7 +35,7 @@ namespace StockSharp.Community
 		/// Initializes a new instance of the <see cref="NotificationClient"/>.
 		/// </summary>
 		public NotificationClient()
-			: this("http://stocksharp.com/services/notificationservice.svc".To<Uri>())
+			: this("https://stocksharp.com/services/notificationservice.svc".To<Uri>())
 		{
 		}
 
@@ -48,8 +47,6 @@ namespace StockSharp.Community
 			: base(address, "notification")
 		{
 		}
-
-		private static bool IsEnglish => LocalizedStrings.ActiveLanguage != Languages.Russian;
 
 		private int? _smsCount;
 
@@ -65,7 +62,7 @@ namespace StockSharp.Community
 
 				return _smsCount.Value;
 			}
-			private set { _smsCount = value; }
+			private set => _smsCount = value;
 		}
 
 		private int? _emailCount;
@@ -82,7 +79,7 @@ namespace StockSharp.Community
 
 				return _emailCount.Value;
 			}
-			private set { _emailCount = value; }
+			private set => _emailCount = value;
 		}
 
 		/// <summary>
@@ -107,19 +104,47 @@ namespace StockSharp.Community
 		}
 
 		/// <summary>
-		/// To send an message.
+		/// To send a message.
 		/// </summary>
 		/// <param name="title">The message title.</param>
 		/// <param name="body">Message body.</param>
-		public void SendMessage(string title, string body)
+		/// <param name="attachments">Attachments.</param>
+		public void SendMessage(string title, string body, FileData[] attachments)
 		{
-			ValidateError(Invoke(f => f.SendMessage(SessionId, title, body, IsEnglish)));
+			if (attachments == null)
+				throw new ArgumentNullException(nameof(attachments));
+
+			ValidateError(Invoke(f => f.SendMessage(SessionId, title, body, attachments.Select(a => a.Id).ToArray(), IsEnglish)));
+		}
+
+		/// <summary>
+		/// Send feedback for specified product.
+		/// </summary>
+		/// <param name="product">Product.</param>
+		/// <param name="rating">Rating.</param>
+		/// <param name="comment">Comment.</param>
+		public void SendFeedback(Products product, int rating, string comment)
+		{
+			ValidateError(Invoke(f => f.SendFeedback(SessionId, product, rating, comment)));
+		}
+
+		/// <summary>
+		/// Has feedback for specified product.
+		/// </summary>
+		/// <param name="product">Product.</param>
+		/// <returns>Check result.</returns>
+		public bool HasFeedback(Products product)
+		{
+			return Invoke(f => f.HasFeedback(SessionId, product));
 		}
 
 		/// <summary>
 		/// News received.
 		/// </summary>
-		public event Action<CommunityNews> NewsReceived; 
+		public event Action<CommunityNews> NewsReceived;
+
+		private readonly SyncObject _syncObject = new SyncObject();
+		private bool _isProcessing;
 
 		/// <summary>
 		/// To subscribe for news.
@@ -128,6 +153,14 @@ namespace StockSharp.Community
 		{
 			_newsTimer = ThreadingHelper.Timer(() =>
 			{
+				lock (_syncObject)
+				{
+					if (_isProcessing)
+						return;
+
+					_isProcessing = true;
+				}
+
 				try
 				{
 					RequestNews();
@@ -135,6 +168,11 @@ namespace StockSharp.Community
 				catch (Exception ex)
 				{
 					ex.LogError();
+				}
+				finally
+				{
+					lock (_syncObject)
+						_isProcessing = false;
 				}
 			}).Interval(TimeSpan.Zero, TimeSpan.FromDays(1));
 		}
@@ -149,7 +187,7 @@ namespace StockSharp.Community
 
 		private void RequestNews()
 		{
-			var news = Invoke(f => f.GetNews2(TryGetSession ?? Guid.Empty, IsEnglish, 0));
+			var news = Invoke(f => f.GetNews2(NullableSessionId ?? Guid.Empty, IsEnglish, 0));
 
 			//if (news.Length <= 0)
 			//	return;
@@ -158,7 +196,7 @@ namespace StockSharp.Community
 
 			foreach (var n in news)
 			{
-				n.EndDate = n.EndDate.ChangeKind(DateTimeKind.Utc);
+				n.EndDate = n.EndDate.UtcKind();
 				NewsReceived?.Invoke(n);
 			}
 

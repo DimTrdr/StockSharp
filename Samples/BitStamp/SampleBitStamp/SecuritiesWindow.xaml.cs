@@ -27,6 +27,7 @@ namespace SampleBitStamp
 	using StockSharp.BusinessEntities;
 	using StockSharp.Xaml;
 	using StockSharp.Localization;
+	using StockSharp.Messages;
 
 	public partial class SecuritiesWindow
 	{
@@ -58,7 +59,7 @@ namespace SampleBitStamp
 
 		private void SecurityPicker_OnSecuritySelected(Security security)
 		{
-			Quotes.IsEnabled = NewOrder.IsEnabled = Depth.IsEnabled = security != null;
+			Quotes.IsEnabled = NewOrder.IsEnabled = NewStopOrder.IsEnabled = Depth.IsEnabled = OrderLog.IsEnabled = security != null;
 		}
 
 		private void NewOrderClick(object sender, RoutedEventArgs e)
@@ -75,57 +76,100 @@ namespace SampleBitStamp
 				MainWindow.Instance.Trader.RegisterOrder(newOrder.Order);
 		}
 
+		private void NewStopOrderClick(object sender, RoutedEventArgs e)
+		{
+			var newOrder = new OrderConditionalWindow
+			{
+				Order = new Order
+				{
+					Security = SecurityPicker.SelectedSecurity,
+					Type = OrderTypes.Conditional,
+				},
+				SecurityProvider = MainWindow.Instance.Trader,
+				MarketDataProvider = MainWindow.Instance.Trader,
+				Portfolios = new PortfolioDataSource(MainWindow.Instance.Trader),
+				Adapter = MainWindow.Instance.Trader.TransactionAdapter
+			};
+
+			if (newOrder.ShowModal(this))
+				MainWindow.Instance.Trader.RegisterOrder(newOrder.Order);
+		}
+
 		private void DepthClick(object sender, RoutedEventArgs e)
 		{
 			var trader = MainWindow.Instance.Trader;
 
-			var security = SecurityPicker.SelectedSecurity;
-
-			var window = _quotesWindows.SafeAdd(security, key =>
+			foreach (var security in SecurityPicker.SelectedSecurities)
 			{
-				// create order book window
-				var wnd = new QuotesWindow { Title = security.Id + " " + LocalizedStrings.MarketDepth };
-				wnd.MakeHideable();
-				return wnd;
-			});
+				var window = _quotesWindows.SafeAdd(security, key =>
+				{
+					// create order book window
+					var wnd = new QuotesWindow
+					{
+						Title = security.Id + " " + LocalizedStrings.MarketDepth
+					};
+					wnd.MakeHideable();
+					return wnd;
+				});
 
-			if (window.Visibility == Visibility.Visible)
-			{
-				// unsubscribe from order book flow
-				trader.UnRegisterMarketDepth(security);
+				if (window.Visibility == Visibility.Visible)
+				{
+					// unsubscribe from order book flow
+					trader.UnRegisterMarketDepth(security);
 
-				window.Hide();
-			}
-			else
-			{
-				// subscribe on order book flow
-				trader.RegisterMarketDepth(security);
+					window.Hide();
+				}
+				else
+				{
+					// subscribe on order book flow
+					trader.RegisterMarketDepth(security);
 
-				window.Show();
-			}
+					window.Show();
 
-			if (!_initialized)
-			{
-				TraderOnMarketDepthChanged(trader.GetMarketDepth(security));
-				trader.MarketDepthChanged += TraderOnMarketDepthChanged;
-				_initialized = true;
+					window.DepthCtrl.UpdateDepth(trader.GetMarketDepth(security));
+				}
+
+				if (!_initialized)
+				{
+					trader.MarketDepthChanged += TraderOnMarketDepthChanged;
+					_initialized = true;
+				}
 			}
 		}
 
 		private void QuotesClick(object sender, RoutedEventArgs e)
 		{
-			var security = SecurityPicker.SelectedSecurity;
 			var trader = MainWindow.Instance.Trader;
 
-			if (trader.RegisteredSecurities.Contains(security))
+			foreach (var security in SecurityPicker.SelectedSecurities)
 			{
-				trader.UnRegisterSecurity(security);
-				trader.UnRegisterTrades(security);
+				if (trader.RegisteredSecurities.Contains(security))
+				{
+					trader.UnRegisterSecurity(security);
+					trader.UnRegisterTrades(security);
+				}
+				else
+				{
+					trader.RegisterSecurity(security);
+					trader.RegisterTrades(security);
+				}
 			}
-			else
+		}
+
+		private void OrderLogClick(object sender, RoutedEventArgs e)
+		{
+			var trader = MainWindow.Instance.Trader;
+
+			foreach (var security in SecurityPicker.SelectedSecurities)
 			{
-				trader.RegisterSecurity(security);
-				trader.RegisterTrades(security);
+				if (trader.RegisteredOrderLogs.Contains(security))
+				{
+					trader.UnRegisterOrderLog(security);
+				}
+				else
+				{
+					trader.RegisterOrderLog(security);
+				}
 			}
 		}
 

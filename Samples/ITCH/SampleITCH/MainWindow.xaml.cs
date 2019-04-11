@@ -58,11 +58,7 @@ namespace SampleITCH
 			_logManager.Listeners.Add(new GuiLogListener(Monitor));
 
 			// create connector
-			Trader = new ItchTrader
-			{
-				LogLevel = LogLevels.Debug,
-				CreateDepthFromOrdersLog = true
-			};
+			Trader = new ItchTrader();
 
 			_logManager.Sources.Add(Trader);
 
@@ -106,7 +102,7 @@ namespace SampleITCH
 				{
 					_initialized = true;
 
-					// update gui labes
+					// update gui labels
 					Trader.ReConnectionSettings.WorkingTime = ExchangeBoard.Forts.WorkingTime;
 					Trader.Restored += () => this.GuiAsync(() =>
 					{
@@ -120,7 +116,7 @@ namespace SampleITCH
 						// set flag (connection is established)
 						_isConnected = true;
 
-						// update gui labes
+						// update gui labels
 						this.GuiAsync(() => ChangeConnectStatus(true));
 					};
 					Trader.Disconnected += () => this.GuiAsync(() => ChangeConnectStatus(false));
@@ -128,7 +124,7 @@ namespace SampleITCH
 					// subscribe on connection error event
 					Trader.ConnectionError += error => this.GuiAsync(() =>
 					{
-						// update gui labes
+						// update gui labels
 						ChangeConnectStatus(false);
 
 						MessageBox.Show(this, error.ToString(), LocalizedStrings.Str2959);	
@@ -149,7 +145,7 @@ namespace SampleITCH
 					var subscribed = false;
 					//if (AllDepths.IsChecked == true)
 					{
-						Trader.LookupSecuritiesResult += (error, securities) =>
+						Trader.LookupSecuritiesResult += (message, securities, error) =>
 						{
 							if (subscribed)
 								return;

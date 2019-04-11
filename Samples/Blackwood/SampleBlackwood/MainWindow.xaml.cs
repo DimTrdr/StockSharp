@@ -125,7 +125,7 @@ namespace SampleBlackwood
 
 					Trader.Restored += () => this.GuiAsync(() =>
 					{
-						// update gui labes
+						// update gui labels
 						ChangeConnectStatus(true);
 						MessageBox.Show(this, LocalizedStrings.Str2958);
 					});
@@ -136,7 +136,7 @@ namespace SampleBlackwood
 						// set flag (connection is established)
 						_isConnected = true;
 
-						// update gui labes
+						// update gui labels
 						this.GuiAsync(() => ChangeConnectStatus(true));
 
 						// запускаем подписку на новости
@@ -154,7 +154,7 @@ namespace SampleBlackwood
 					// subscribe on connection error event
 					Trader.ConnectionError += error => this.GuiAsync(() =>
 					{
-						// update gui labes
+						// update gui labels
 						ChangeConnectStatus(false);
 
 						MessageBox.Show(this, error.ToString(), LocalizedStrings.Str2959);	
@@ -168,20 +168,14 @@ namespace SampleBlackwood
 					Trader.MarketDataSubscriptionFailed += (security, msg, error) =>
 						this.GuiAsync(() => MessageBox.Show(this, error.ToString(), LocalizedStrings.Str2956Params.Put(msg.DataType, security)));
 
-					Trader.NewSecurity += security => _securitiesWindow.SecurityPicker.Securities.Add(security);
-					Trader.NewMyTrade += trade => _myTradesWindow.TradeGrid.Trades.Add(trade);
-					Trader.NewTrade += trade => _tradesWindow.TradeGrid.Trades.Add(trade);
-					Trader.NewOrder += order => _ordersWindow.OrderGrid.Orders.Add(order);
-					Trader.NewStopOrder += order => _stopOrdersWindow.OrderGrid.Orders.Add(order);
+					Trader.NewSecurity += _securitiesWindow.SecurityPicker.Securities.Add;
+					Trader.NewMyTrade += _myTradesWindow.TradeGrid.Trades.Add;
+					Trader.NewTrade += _tradesWindow.TradeGrid.Trades.Add;
+					Trader.NewOrder += _ordersWindow.OrderGrid.Orders.Add;
+					Trader.NewStopOrder += _stopOrdersWindow.OrderGrid.Orders.Add;
 					
-					Trader.NewPortfolio += portfolio =>
-					{
-						// subscribe on portfolio updates
-						Trader.RegisterPortfolio(portfolio);
-
-						_portfoliosWindow.PortfolioGrid.Portfolios.Add(portfolio);
-					};
-					Trader.NewPosition += position => _portfoliosWindow.PortfolioGrid.Positions.Add(position);
+					Trader.NewPortfolio += _portfoliosWindow.PortfolioGrid.Portfolios.Add;
+					Trader.NewPosition += _portfoliosWindow.PortfolioGrid.Positions.Add;
 
 					// subscribe on error of order registration event
 					Trader.OrderRegisterFailed += _ordersWindow.OrderGrid.AddRegistrationFail;

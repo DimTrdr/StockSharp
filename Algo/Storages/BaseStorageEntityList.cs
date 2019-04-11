@@ -41,17 +41,20 @@ namespace StockSharp.Algo.Storages
 		public SyncObject SyncRoot { get; } = new SyncObject();
 
 		/// <summary>
-		/// The time designating field.
-		/// </summary>
-		protected virtual Field TimeField => Schema.Fields["Time"];
-
-		/// <summary>
 		/// Initialize <see cref="BaseStorageEntityList{T}"/>.
 		/// </summary>
 		/// <param name="storage">The special interface for direct access to the storage.</param>
 		protected BaseStorageEntityList(IStorage storage)
 			: base(storage)
 		{
+		}
+
+		DelayAction IStorageEntityList<T>.DelayAction => DelayAction;
+
+		/// <inheritdoc />
+		void IStorageEntityList<T>.WaitFlush()
+		{
+			DelayAction.DefaultGroup.WaitFlush(false);
 		}
 
 		/// <summary>
@@ -98,16 +101,6 @@ namespace StockSharp.Algo.Storages
 
 			lock (SyncRoot)
 				base.Save(entity);
-		}
-
-		/// <summary>
-		/// To load last created data.
-		/// </summary>
-		/// <param name="count">The amount of requested data.</param>
-		/// <returns>The data range.</returns>
-		public virtual IEnumerable<T> ReadLasts(int count)
-		{
-			return ReadLasts(count, TimeField);
 		}
 
 		/// <summary>
@@ -207,16 +200,16 @@ namespace StockSharp.Algo.Storages
 
 		event Action<IEnumerable<T>> ICollectionEx<T>.AddedRange
 		{
-			add { _addedRange += value; }
-			remove { _addedRange -= value; }
+			add => _addedRange += value;
+			remove => _addedRange -= value;
 		}
 
 		private Action<IEnumerable<T>> _removedRange;
 
 		event Action<IEnumerable<T>> ICollectionEx<T>.RemovedRange
 		{
-			add { _removedRange += value; }
-			remove { _removedRange -= value; }
+			add => _removedRange += value;
+			remove => _removedRange -= value;
 		}
 	}
 }

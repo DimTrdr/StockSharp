@@ -96,12 +96,10 @@ namespace StockSharp.Algo.Statistics
 
 		private string _name;
 
-		/// <summary>
-		/// Parameter name.
-		/// </summary>
+		/// <inheritdoc />
 		public string Name
 		{
-			get { return _name; }
+			get => _name;
 			set
 			{
 				if (_name == value)
@@ -112,29 +110,21 @@ namespace StockSharp.Algo.Statistics
 			}
 		}
 
-		/// <summary>
-		/// The displayed parameter name.
-		/// </summary>
+		/// <inheritdoc />
 		public string DisplayName { get; }
 
-		/// <summary>
-		/// The parameter description.
-		/// </summary>
+		/// <inheritdoc />
 		public string Description { get; }
 
-		/// <summary>
-		/// Category.
-		/// </summary>
+		/// <inheritdoc />
 		public string Category { get; }
 
 		private TValue _value;
 
-		/// <summary>
-		/// The current value of the parameter.
-		/// </summary>
+		/// <inheritdoc />
 		public virtual TValue Value
 		{
-			get { return _value; }
+			get => _value;
 			protected set
 			{
 				if (_value.CompareTo(value) == 0)
@@ -163,19 +153,12 @@ namespace StockSharp.Algo.Statistics
 			return name;
 		}
 
-		/// <summary>
-		/// The current value of the parameter.
-		/// </summary>
 		object IStatisticParameter.Value => Value;
 
-		/// <summary>
-		/// <see cref="Value"/> change event.
-		/// </summary>
+		/// <inheritdoc />
 		public virtual event Action ValueChanged;
 
-		/// <summary>
-		/// To reset the parameter value.
-		/// </summary>
+		/// <inheritdoc />
 		public virtual void Reset()
 		{
 			Value = default(TValue);

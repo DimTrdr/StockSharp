@@ -26,6 +26,7 @@ namespace StockSharp.Algo.Indicators
 	/// </summary>
 	[DisplayName("LinearRegression")]
 	[DescriptionLoc(LocalizedStrings.Str735Key)]
+	[Browsable(false)]
 	public class LinearRegression : BaseComplexIndicator
 	{
 		/// <summary>
@@ -63,7 +64,7 @@ namespace StockSharp.Algo.Indicators
 		[CategoryLoc(LocalizedStrings.GeneralKey)]
 		public int Length
 		{
-			get { return LinearReg.Length; }
+			get => LinearReg.Length;
 			set
 			{
 				LinearReg.Length = RSquared.Length = LinearRegSlope.Length = StandardError.Length = value;

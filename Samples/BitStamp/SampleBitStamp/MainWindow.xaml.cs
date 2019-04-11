@@ -38,6 +38,7 @@ namespace SampleBitStamp
 		private readonly MyTradesWindow _myTradesWindow = new MyTradesWindow();
 		private readonly OrdersWindow _ordersWindow = new OrdersWindow();
 		private readonly PortfoliosWindow _portfoliosWindow = new PortfoliosWindow();
+		private readonly OrdersLogWindow _ordersLogWindow = new OrdersLogWindow();
 
 		private readonly LogManager _logManager = new LogManager();
 
@@ -48,6 +49,7 @@ namespace SampleBitStamp
 			Title = Title.Put("BitStamp");
 
 			_ordersWindow.MakeHideable();
+			_ordersLogWindow.MakeHideable();
 			_myTradesWindow.MakeHideable();
 			_tradesWindow.MakeHideable();
 			_securitiesWindow.MakeHideable();
@@ -61,12 +63,14 @@ namespace SampleBitStamp
 		protected override void OnClosing(CancelEventArgs e)
 		{
 			_ordersWindow.DeleteHideable();
+			_ordersLogWindow.DeleteHideable();
 			_myTradesWindow.DeleteHideable();
 			_tradesWindow.DeleteHideable();
 			_securitiesWindow.DeleteHideable();
 			_portfoliosWindow.DeleteHideable();
 			
 			_securitiesWindow.Close();
+			_ordersLogWindow.Close();
 			_tradesWindow.Close();
 			_myTradesWindow.Close();
 			_ordersWindow.Close();
@@ -92,13 +96,13 @@ namespace SampleBitStamp
 				
 				if (Key.Text.IsEmpty())
 				{
-					MessageBox.Show(this, LocalizedStrings.Str2974);
+					MessageBox.Show(this, LocalizedStrings.Str3689);
 					return;
 				}
 				
 				if (Secret.Password.IsEmpty())
 				{
-					MessageBox.Show(this, LocalizedStrings.Str2975);
+					MessageBox.Show(this, LocalizedStrings.Str3690);
 					return;
 				}
 
@@ -111,7 +115,7 @@ namespace SampleBitStamp
 
 					Trader.Restored += () => this.GuiAsync(() =>
 					{
-						// update gui labes
+						// update gui labels
 						ChangeConnectStatus(true);
 						MessageBox.Show(this, LocalizedStrings.Str2958);
 					});
@@ -122,7 +126,7 @@ namespace SampleBitStamp
 						// set flag (connection is established)
 						_isConnected = true;
 
-						// update gui labes
+						// update gui labels
 						this.GuiAsync(() => ChangeConnectStatus(true));
 					};
 					Trader.Disconnected += () => this.GuiAsync(() => ChangeConnectStatus(false));
@@ -130,7 +134,7 @@ namespace SampleBitStamp
 					// subscribe on connection error event
 					Trader.ConnectionError += error => this.GuiAsync(() =>
 					{
-						// update gui labes
+						// update gui labels
 						ChangeConnectStatus(false);
 
 						MessageBox.Show(this, error.ToString(), LocalizedStrings.Str2959);
@@ -144,19 +148,14 @@ namespace SampleBitStamp
 					Trader.MarketDataSubscriptionFailed += (security, msg, error) =>
 						this.GuiAsync(() => MessageBox.Show(this, error.ToString(), LocalizedStrings.Str2956Params.Put(msg.DataType, security)));
 
-					Trader.NewSecurity += security => _securitiesWindow.SecurityPicker.Securities.Add(security);
-					Trader.NewMyTrade += trade => _myTradesWindow.TradeGrid.Trades.Add(trade);
-					Trader.NewTrade += trade => _tradesWindow.TradeGrid.Trades.Add(trade);
-					Trader.NewOrder += order => _ordersWindow.OrderGrid.Orders.Add(order);
+					Trader.NewSecurity += _securitiesWindow.SecurityPicker.Securities.Add;
+					Trader.NewMyTrade += _myTradesWindow.TradeGrid.Trades.Add;
+					Trader.NewTrade += _tradesWindow.TradeGrid.Trades.Add;
+					Trader.NewOrder += _ordersWindow.OrderGrid.Orders.Add;
+					Trader.NewOrderLogItem += _ordersLogWindow.OrderLogGrid.LogItems.Add;
 					
-					Trader.NewPortfolio += portfolio =>
-					{
-						// subscribe on portfolio updates
-						Trader.RegisterPortfolio(portfolio);
-
-						_portfoliosWindow.PortfolioGrid.Portfolios.Add(portfolio);
-					};
-					Trader.NewPosition += position => _portfoliosWindow.PortfolioGrid.Positions.Add(position);
+					Trader.NewPortfolio += _portfoliosWindow.PortfolioGrid.Portfolios.Add;
+					Trader.NewPosition += _portfoliosWindow.PortfolioGrid.Positions.Add;
 
 					// subscribe on error of order registration event
 					Trader.OrderRegisterFailed += _ordersWindow.OrderGrid.AddRegistrationFail;
@@ -171,10 +170,10 @@ namespace SampleBitStamp
 
 					ShowSecurities.IsEnabled = ShowTrades.IsEnabled =
 					ShowMyTrades.IsEnabled = ShowOrders.IsEnabled = 
-					ShowPortfolios.IsEnabled = true;
+					ShowPortfolios.IsEnabled = ShowOrdersLog.IsEnabled = true;
 				}
 
-				Trader.ClientId = ClientId.Text.To<int>();
+				Trader.ClientId = ClientId.Text;
 				Trader.Key = Key.Text;
 				Trader.Secret = Secret.Password;
 
@@ -226,6 +225,11 @@ namespace SampleBitStamp
 		private void ShowPortfoliosClick(object sender, RoutedEventArgs e)
 		{
 			ShowOrHide(_portfoliosWindow);
+		}
+
+		private void ShowOrdersLogClick(object sender, RoutedEventArgs e)
+		{
+			ShowOrHide(_ordersLogWindow);
 		}
 
 		private static void ShowOrHide(Window window)

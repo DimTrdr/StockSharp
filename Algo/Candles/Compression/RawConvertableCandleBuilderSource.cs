@@ -22,6 +22,7 @@ namespace StockSharp.Algo.Candles.Compression
 	using Ecng.ComponentModel;
 
 	using StockSharp.BusinessEntities;
+	using StockSharp.Messages;
 
 	///// <summary>
 	///// The base data source for <see cref="ICandleBuilder"/> which convert data from the <typeparamref name="TSourceValue" /> type to the <see cref="ICandleBuilderSourceValue"/>.
@@ -181,7 +182,7 @@ namespace StockSharp.Algo.Candles.Compression
 		/// <param name="series">The candles series for which data receiving should be started.</param>
 		/// <param name="from">The initial date from which you need to get data.</param>
 		/// <param name="to">The final date by which you need to get data.</param>
-		public override void Start(CandleSeries series, DateTimeOffset from, DateTimeOffset to)
+		public override void Start(CandleSeries series, DateTimeOffset? from, DateTimeOffset? to)
 		{
 			if (series == null)
 				throw new ArgumentNullException(nameof(series));
@@ -224,7 +225,7 @@ namespace StockSharp.Algo.Candles.Compression
 		/// <param name="to">The last time value.</param>
 		/// <param name="values">Ready data collection.</param>
 		public TradeRawConvertableCandleBuilderSource(Security security, DateTimeOffset from, DateTimeOffset to, IEnumerable<Trade> values)
-			: base(security, @from, to, values)
+			: base(security, from, to, values)
 		{
 		}
 
@@ -244,7 +245,7 @@ namespace StockSharp.Algo.Candles.Compression
 	/// </summary>
 	public class DepthRawConvertableCandleBuilderSource : RawConvertableCandleBuilderSource<MarketDepth>
 	{
-		private readonly DepthCandleSourceTypes _type;
+		private readonly Level1Fields _type;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DepthRawConvertableCandleBuilderSource"/>.
@@ -254,8 +255,8 @@ namespace StockSharp.Algo.Candles.Compression
 		/// <param name="to">The last time value.</param>
 		/// <param name="values">Ready data collection.</param>
 		/// <param name="type">Type of candle depth based data.</param>
-		public DepthRawConvertableCandleBuilderSource(Security security, DateTimeOffset from, DateTimeOffset to, IEnumerable<MarketDepth> values, DepthCandleSourceTypes type)
-			: base(security, @from, to, values)
+		public DepthRawConvertableCandleBuilderSource(Security security, DateTimeOffset from, DateTimeOffset to, IEnumerable<MarketDepth> values, Level1Fields type)
+			: base(security, from, to, values)
 		{
 			_type = type;
 		}

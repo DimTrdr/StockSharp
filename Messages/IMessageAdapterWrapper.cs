@@ -47,10 +47,7 @@ namespace StockSharp.Messages
 		/// <param name="innerAdapter">Underlying adapter.</param>
 		protected MessageAdapterWrapper(IMessageAdapter innerAdapter)
 		{
-			if (innerAdapter == null)
-				throw new ArgumentNullException(nameof(innerAdapter));
-
-			InnerAdapter = innerAdapter;
+			InnerAdapter = innerAdapter ?? throw new ArgumentNullException(nameof(innerAdapter));
 		}
 
 		/// <summary>
@@ -58,7 +55,7 @@ namespace StockSharp.Messages
 		/// </summary>
 		public IMessageAdapter InnerAdapter
 		{
-			get { return _innerAdapter; }
+			get => _innerAdapter;
 			set
 			{
 				if (_innerAdapter == value)
@@ -79,7 +76,7 @@ namespace StockSharp.Messages
 		/// <summary>
 		/// Control <see cref="InnerAdapter"/> lifetime.
 		/// </summary>
-		public bool OwnInnerAdaper { get; set; }
+		public bool OwnInnerAdapter { get; set; }
 
 		/// <summary>
 		/// Process <see cref="InnerAdapter"/> output message.
@@ -125,12 +122,20 @@ namespace StockSharp.Messages
 		/// </summary>
 		public virtual event Action<Message> NewOutMessage;
 
-		void IPersistable.Load(SettingsStorage storage)
+		/// <summary>
+		/// Load settings.
+		/// </summary>
+		/// <param name="storage">Settings storage.</param>
+		public virtual void Load(SettingsStorage storage)
 		{
 			InnerAdapter.Load(storage);
 		}
 
-		void IPersistable.Save(SettingsStorage storage)
+		/// <summary>
+		/// Save settings.
+		/// </summary>
+		/// <param name="storage">Settings storage.</param>
+		public virtual void Save(SettingsStorage storage)
 		{
 			InnerAdapter.Save(storage);
 		}
@@ -139,26 +144,28 @@ namespace StockSharp.Messages
 
 		string ILogSource.Name => InnerAdapter.Name;
 
-		ILogSource ILogSource.Parent
+		/// <inheritdoc />
+		public virtual ILogSource Parent
 		{
-			get { return InnerAdapter.Parent; }
-			set { InnerAdapter.Parent = value; }
+			get => InnerAdapter.Parent;
+			set => InnerAdapter.Parent = value;
 		}
 
 		LogLevels ILogSource.LogLevel
 		{
-			get { return InnerAdapter.LogLevel; }
-			set { InnerAdapter.LogLevel = value; }
+			get => InnerAdapter.LogLevel;
+			set => InnerAdapter.LogLevel = value;
 		}
 
-		DateTimeOffset ILogSource.CurrentTime => InnerAdapter.CurrentTime;
+		/// <inheritdoc />
+		public DateTimeOffset CurrentTime => InnerAdapter.CurrentTime;
 
 		bool ILogSource.IsRoot => InnerAdapter.IsRoot;
 
 		event Action<LogMessage> ILogSource.Log
 		{
-			add { InnerAdapter.Log += value; }
-			remove { InnerAdapter.Log -= value; }
+			add => InnerAdapter.Log += value;
+			remove => InnerAdapter.Log -= value;
 		}
 
 		void ILogReceiver.AddLog(LogMessage message)
@@ -166,57 +173,105 @@ namespace StockSharp.Messages
 			InnerAdapter.AddLog(message);
 		}
 
-		ReConnectionSettings IMessageAdapter.ReConnectionSettings => InnerAdapter.ReConnectionSettings;
-
-		IdGenerator IMessageAdapter.TransactionIdGenerator => InnerAdapter.TransactionIdGenerator;
-
-		MessageTypes[] IMessageAdapter.SupportedMessages
+		/// <inheritdoc />
+		public bool CheckTimeFrameByRequest
 		{
-			get { return InnerAdapter.SupportedMessages; }
-			set { InnerAdapter.SupportedMessages = value; }
+			get => InnerAdapter.CheckTimeFrameByRequest;
+			set => InnerAdapter.CheckTimeFrameByRequest = value;
 		}
 
-		bool IMessageAdapter.IsValid => InnerAdapter.IsValid;
+		/// <inheritdoc />
+		public ReConnectionSettings ReConnectionSettings => InnerAdapter.ReConnectionSettings;
+
+		/// <inheritdoc />
+		public IdGenerator TransactionIdGenerator => InnerAdapter.TransactionIdGenerator;
+
+		/// <inheritdoc />
+		public virtual MessageTypes[] SupportedMessages
+		{
+			get => InnerAdapter.SupportedMessages;
+			set => InnerAdapter.SupportedMessages = value;
+		}
+
+		/// <inheritdoc />
+		public virtual MarketDataTypes[] SupportedMarketDataTypes
+		{
+			get => InnerAdapter.SupportedMarketDataTypes;
+			set => InnerAdapter.SupportedMarketDataTypes = value;
+		}
 
 		IDictionary<string, RefPair<SecurityTypes, string>> IMessageAdapter.SecurityClassInfo => InnerAdapter.SecurityClassInfo;
 
-		TimeSpan IMessageAdapter.HeartbeatInterval
+		/// <inheritdoc />
+		public TimeSpan HeartbeatInterval
 		{
-			get { return InnerAdapter.HeartbeatInterval; }
-			set { InnerAdapter.HeartbeatInterval = value; }
+			get => InnerAdapter.HeartbeatInterval;
+			set => InnerAdapter.HeartbeatInterval = value;
 		}
 
-		bool IMessageAdapter.PortfolioLookupRequired => InnerAdapter.PortfolioLookupRequired;
+		/// <inheritdoc />
+		public virtual bool PortfolioLookupRequired => InnerAdapter.PortfolioLookupRequired;
 
-		bool IMessageAdapter.SecurityLookupRequired => InnerAdapter.SecurityLookupRequired;
+		/// <inheritdoc />
+		public virtual bool SecurityLookupRequired => InnerAdapter.SecurityLookupRequired;
 
-		bool IMessageAdapter.OrderStatusRequired => InnerAdapter.OrderStatusRequired;
+		/// <inheritdoc />
+		public virtual bool OrderStatusRequired => InnerAdapter.OrderStatusRequired;
 
-		string IMessageAdapter.StorageName => InnerAdapter.StorageName;
+		/// <inheritdoc />
+		public virtual IEnumerable<TimeSpan> TimeFrames => InnerAdapter.TimeFrames;
 
-		bool IMessageAdapter.IsNativeIdentifiersPersistable => InnerAdapter.IsNativeIdentifiersPersistable;
+		/// <inheritdoc />
+		public string StorageName => InnerAdapter.StorageName;
 
-		bool IMessageAdapter.IsNativeIdentifiers => InnerAdapter.IsNativeIdentifiers;
+		/// <inheritdoc />
+		public virtual bool IsNativeIdentifiersPersistable => InnerAdapter.IsNativeIdentifiersPersistable;
 
-		OrderCancelVolumeRequireTypes? IMessageAdapter.OrderCancelVolumeRequired => InnerAdapter.OrderCancelVolumeRequired;
+		/// <inheritdoc />
+		public virtual bool IsNativeIdentifiers => InnerAdapter.IsNativeIdentifiers;
 
-		string IMessageAdapter.AssociatedBoardCode => InnerAdapter.AssociatedBoardCode;
+		/// <inheritdoc />
+		public virtual bool IsFullCandlesOnly => InnerAdapter.IsFullCandlesOnly;
 
-		string[] IMessageAdapter.SecurityExtendedFields => InnerAdapter.SecurityExtendedFields;
+		/// <inheritdoc />
+		public virtual bool IsSupportSubscriptions => InnerAdapter.IsSupportSubscriptions;
 
-		OrderCondition IMessageAdapter.CreateOrderCondition()
-		{
-			return InnerAdapter.CreateOrderCondition();
-		}
+		/// <inheritdoc />
+		public virtual bool IsSupportSubscriptionBySecurity => InnerAdapter.IsSupportSubscriptionBySecurity;
 
-		bool IMessageAdapter.IsConnectionAlive()
-		{
-			return InnerAdapter.IsConnectionAlive();
-		}
+		/// <inheritdoc />
+		public virtual bool IsSupportSubscriptionByPortfolio => InnerAdapter.IsSupportSubscriptionByPortfolio;
+
+		/// <inheritdoc />
+		public virtual bool IsSupportCandlesUpdates => InnerAdapter.IsSupportCandlesUpdates;
+
+		/// <inheritdoc />
+		public virtual MessageAdapterCategories Categories => InnerAdapter.Categories;
+
+		/// <inheritdoc />
+		public virtual OrderCancelVolumeRequireTypes? OrderCancelVolumeRequired => InnerAdapter.OrderCancelVolumeRequired;
+
+		/// <inheritdoc />
+		public string AssociatedBoardCode => InnerAdapter.AssociatedBoardCode;
+
+		Tuple<string, Type>[] IMessageAdapter.SecurityExtendedFields => InnerAdapter.SecurityExtendedFields;
+
+		/// <inheritdoc />
+		public virtual bool IsSupportSecuritiesLookupAll => InnerAdapter.IsSupportSecuritiesLookupAll;
+
+		OrderCondition IMessageAdapter.CreateOrderCondition() => InnerAdapter.CreateOrderCondition();
+
+		bool IMessageAdapter.IsConnectionAlive() => InnerAdapter.IsConnectionAlive();
 
 		IOrderLogMarketDepthBuilder IMessageAdapter.CreateOrderLogMarketDepthBuilder(SecurityId securityId)
 		{
 			return InnerAdapter.CreateOrderLogMarketDepthBuilder(securityId);
+		}
+
+		/// <inheritdoc />
+		public virtual IEnumerable<TimeSpan> GetTimeFrames(SecurityId securityId)
+		{
+			return InnerAdapter.GetTimeFrames(securityId);
 		}
 
 		/// <summary>
@@ -226,8 +281,11 @@ namespace StockSharp.Messages
 		{
 			InnerAdapter.NewOutMessage -= OnInnerAdapterNewOutMessage;
 
-			if (OwnInnerAdaper)
+			if (OwnInnerAdapter)
 				InnerAdapter.Dispose();
 		}
+
+		/// <inheritdoc />
+		public override string ToString() => InnerAdapter.ToString();
 	}
 }

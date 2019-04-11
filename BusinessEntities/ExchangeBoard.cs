@@ -21,6 +21,7 @@ namespace StockSharp.BusinessEntities
 	using System.Linq;
 	using System.Reflection;
 	using System.Runtime.Serialization;
+	using System.Xml;
 	using System.Xml.Serialization;
 
 	using Ecng.Common;
@@ -64,7 +65,7 @@ namespace StockSharp.BusinessEntities
 		/// </summary>
 		public ExchangeBoard()
 		{
-			ExtensionInfo = new Dictionary<object, object>();
+			ExtensionInfo = new Dictionary<string, object>();
 		}
 
 		private string _code = string.Empty;
@@ -75,20 +76,17 @@ namespace StockSharp.BusinessEntities
 		[DataMember]
 		[Identity]
 		[DisplayNameLoc(LocalizedStrings.CodeKey)]
-		[DescriptionLoc(LocalizedStrings.BoardCodeKey)]
+		[DescriptionLoc(LocalizedStrings.BoardCodeKey, true)]
 		[MainCategory]
 		public string Code
 		{
-			get { return _code; }
+			get => _code;
 			set
 			{
-				if (value == null)
-					throw new ArgumentNullException(nameof(value));
-
 				if (Code == value)
 					return;
 
-				_code = value;
+				_code = value ?? throw new ArgumentNullException(nameof(value));
 				Notify(nameof(Code));
 			}
 		}
@@ -103,9 +101,10 @@ namespace StockSharp.BusinessEntities
 		[DisplayNameLoc(LocalizedStrings.ExpiryDateKey)]
 		[DescriptionLoc(LocalizedStrings.Str64Key)]
 		[MainCategory]
+		[XmlIgnore]
 		public TimeSpan ExpiryTime
 		{
-			get { return _expiryTime; }
+			get => _expiryTime;
 			set
 			{
 				if (ExpiryTime == value)
@@ -114,6 +113,20 @@ namespace StockSharp.BusinessEntities
 				_expiryTime = value;
 				Notify(nameof(ExpiryTime));
 			}
+		}
+
+		/// <summary>
+		/// Reserved.
+		/// </summary>
+		[Browsable(false)]
+		[XmlElement(DataType = "duration", ElementName = nameof(ExpiryTime))]
+		[Ignore]
+		public string ExpiryTimeStr
+		{
+			// XmlSerializer does not support TimeSpan, so use this property for 
+			// serialization instead.
+			get => XmlConvert.ToString(ExpiryTime);
+			set => ExpiryTime = value.IsEmpty() ? TimeSpan.Zero : XmlConvert.ToTimeSpan(value);
 		}
 
 		/// <summary>
@@ -176,16 +189,13 @@ namespace StockSharp.BusinessEntities
 		[InnerSchema]
 		public WorkingTime WorkingTime
 		{
-			get { return _workingTime; }
+			get => _workingTime;
 			set
 			{
-				if (value == null)
-					throw new ArgumentNullException(nameof(value));
-
 				if (WorkingTime == value)
 					return;
 
-				_workingTime = value;
+				_workingTime = value ?? throw new ArgumentNullException(nameof(value));
 				Notify(nameof(WorkingTime));
 			}
 		}
@@ -201,22 +211,31 @@ namespace StockSharp.BusinessEntities
 		//[DataMember]
 		public TimeZoneInfo TimeZone
 		{
-			get { return _timeZone; }
+			get => _timeZone;
 			set
 			{
-				if (value == null)
-					throw new ArgumentNullException(nameof(value));
-
 				if (TimeZone == value)
 					return;
 
-				_timeZone = value;
+				_timeZone = value ?? throw new ArgumentNullException(nameof(value));
 				Notify(nameof(TimeZone));
 			}
 		}
 
+		/// <summary>
+		/// Reserved.
+		/// </summary>
+		[Browsable(false)]
+		[DataMember]
+		[Ignore]
+		public string TimeZoneStr
+		{
+			get => TimeZone.To<string>();
+			set => TimeZone = value.To<TimeZoneInfo>();
+		}
+
 		[field: NonSerialized]
-		private IDictionary<object, object> _extensionInfo;
+		private IDictionary<string, object> _extensionInfo;
 
 		/// <summary>
 		/// Extended exchange info.
@@ -227,15 +246,12 @@ namespace StockSharp.BusinessEntities
 		[XmlIgnore]
 		[Browsable(false)]
 		[DataMember]
-		public IDictionary<object, object> ExtensionInfo
+		public IDictionary<string, object> ExtensionInfo
 		{
-			get { return _extensionInfo; }
+			get => _extensionInfo;
 			set
 			{
-				if (value == null)
-					throw new ArgumentNullException(nameof(value));
-
-				_extensionInfo = value;
+				_extensionInfo = value ?? throw new ArgumentNullException(nameof(value));
 				Notify(nameof(ExtensionInfo));
 			}
 		}
@@ -244,7 +260,7 @@ namespace StockSharp.BusinessEntities
 		private void AfterDeserialization(StreamingContext ctx)
 		{
 			if (ExtensionInfo == null)
-				ExtensionInfo = new Dictionary<object, object>();
+				ExtensionInfo = new Dictionary<string, object>();
 		}
 
 		[field: NonSerialized]
@@ -252,8 +268,8 @@ namespace StockSharp.BusinessEntities
 
 		event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
 		{
-			add { _propertyChanged += value; }
-			remove { _propertyChanged -= value; }
+			add => _propertyChanged += value;
+			remove => _propertyChanged -= value;
 		}
 
 		private void Notify(string info)

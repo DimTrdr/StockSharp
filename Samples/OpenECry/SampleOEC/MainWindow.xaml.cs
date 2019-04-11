@@ -33,7 +33,6 @@ namespace SampleOEC
 		public OpenECryTrader Trader;
 
 		private readonly SecuritiesWindow _securitiesWindow = new SecuritiesWindow();
-		private readonly TradesWindow _tradesWindow = new TradesWindow();
 		private readonly MyTradesWindow _myTradesWindow = new MyTradesWindow();
 		private readonly OrdersWindow _ordersWindow = new OrdersWindow();
 		private readonly PortfoliosWindow _portfoliosWindow = new PortfoliosWindow();
@@ -48,7 +47,6 @@ namespace SampleOEC
 
 			_ordersWindow.MakeHideable();
 			_myTradesWindow.MakeHideable();
-			_tradesWindow.MakeHideable();
 			_securitiesWindow.MakeHideable();
 			_stopOrdersWindow.MakeHideable();
 			_portfoliosWindow.MakeHideable();
@@ -61,14 +59,12 @@ namespace SampleOEC
 		{
 			_ordersWindow.DeleteHideable();
 			_myTradesWindow.DeleteHideable();
-			_tradesWindow.DeleteHideable();
 			_securitiesWindow.DeleteHideable();
 			_stopOrdersWindow.DeleteHideable();
 			_portfoliosWindow.DeleteHideable();
 			_newsWindow.DeleteHideable();
 			
 			_securitiesWindow.Close();
-			_tradesWindow.Close();
 			_myTradesWindow.Close();
 			_stopOrdersWindow.Close();
 			_ordersWindow.Close();
@@ -109,7 +105,7 @@ namespace SampleOEC
 
 					Trader.Restored += () => this.GuiAsync(() =>
 					{
-						// update gui labes
+						// update gui labels
 						ChangeConnectStatus(true);
 						MessageBox.Show(this, LocalizedStrings.Str2958);
 					});
@@ -120,7 +116,7 @@ namespace SampleOEC
 						// set flag (connection is established)
 						_isConnected = true;
 
-						// update gui labes
+						// update gui labels
 						this.GuiAsync(() => ChangeConnectStatus(true));
 
 						// subscribe on news
@@ -130,7 +126,7 @@ namespace SampleOEC
 					// subscribe on connection error event
 					Trader.ConnectionError += error => this.GuiAsync(() =>
 					{
-						// update gui labes
+						// update gui labels
 						ChangeConnectStatus(false);
 
 						MessageBox.Show(this, error.ToString(), LocalizedStrings.Str2959);	
@@ -141,19 +137,12 @@ namespace SampleOEC
 					// subscribe on error event
 					Trader.Error += error => this.GuiAsync(() => MessageBox.Show(this, error.ToString(), LocalizedStrings.Str2955));
 
-					Trader.NewSecurity += security => _securitiesWindow.SecurityPicker.Securities.Add(security);
-					Trader.NewMyTrade += trade => _myTradesWindow.TradeGrid.Trades.Add(trade);
-					Trader.NewTrade += trade => _tradesWindow.TradeGrid.Trades.Add(trade);
-					Trader.NewOrder += order => _ordersWindow.OrderGrid.Orders.Add(order);
-					Trader.NewStopOrder += order => _stopOrdersWindow.OrderGrid.Orders.Add(order);
-					Trader.NewPortfolio += portfolio =>
-					{
-						_portfoliosWindow.PortfolioGrid.Portfolios.Add(portfolio);
-
-						// subscribe on portfolio updates
-						Trader.RegisterPortfolio(portfolio);
-					};
-					Trader.NewPosition += position => _portfoliosWindow.PortfolioGrid.Positions.Add(position);
+					Trader.NewSecurity += _securitiesWindow.SecurityPicker.Securities.Add;
+					Trader.NewMyTrade += _myTradesWindow.TradeGrid.Trades.Add;
+					Trader.NewOrder += _ordersWindow.OrderGrid.Orders.Add;
+					Trader.NewStopOrder += _stopOrdersWindow.OrderGrid.Orders.Add;
+					Trader.NewPortfolio += _portfoliosWindow.PortfolioGrid.Portfolios.Add;
+					Trader.NewPosition += _portfoliosWindow.PortfolioGrid.Positions.Add;
 
 					// subscribe on error of order registration event
 					Trader.OrderRegisterFailed += _ordersWindow.OrderGrid.AddRegistrationFail;
@@ -176,7 +165,7 @@ namespace SampleOEC
 					// set news provider
 					_newsWindow.NewsPanel.NewsProvider = Trader;
 
-					ShowSecurities.IsEnabled = ShowTrades.IsEnabled =
+					ShowSecurities.IsEnabled = ShowNews.IsEnabled =
 					ShowMyTrades.IsEnabled = ShowOrders.IsEnabled = 
 					ShowPortfolios.IsEnabled = ShowStopOrders.IsEnabled = true;
 				}
@@ -217,11 +206,6 @@ namespace SampleOEC
 			ShowOrHide(_securitiesWindow);
 		}
 
-		private void ShowTradesClick(object sender, RoutedEventArgs e)
-		{
-			ShowOrHide(_tradesWindow);
-		}
-
 		private void ShowMyTradesClick(object sender, RoutedEventArgs e)
 		{
 			ShowOrHide(_myTradesWindow);
@@ -240,6 +224,11 @@ namespace SampleOEC
 		private void ShowStopOrdersClick(object sender, RoutedEventArgs e)
 		{
 			ShowOrHide(_stopOrdersWindow);
+		}
+
+		private void ShowNewsClick(object sender, RoutedEventArgs e)
+		{
+			ShowOrHide(_newsWindow);
 		}
 
 		private static void ShowOrHide(Window window)

@@ -78,7 +78,6 @@
     </Compile>
     <Compile Include="AggregatedQuote.cs" />
     <Compile Include="BasePosition.cs" />
-    <Compile Include="BasketSecurity.cs" />
     <Compile Include="CategoryAttributes.cs" />
     <Compile Include="Exchange.cs" />
     <Compile Include="ExchangeBoard.cs" />
@@ -88,6 +87,7 @@
     <Compile Include="IMarketDataProvider.cs" />
     <Compile Include="INewsProvider.cs" />
     <Compile Include="IPortfolioProvider.cs" />
+    <Compile Include="IPositionProvider.cs" />
     <Compile Include="ISecurityProvider.cs" />
     <Compile Include="MarketDepth.cs" />
     <Compile Include="MarketDepthPair.cs" />

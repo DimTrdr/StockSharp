@@ -17,6 +17,7 @@ namespace StockSharp.BusinessEntities
 {
 	using System;
 	using System.Collections.Generic;
+	using System.ComponentModel.DataAnnotations;
 	using System.Runtime.Serialization;
 	using System.Xml.Serialization;
 
@@ -83,6 +84,8 @@ namespace StockSharp.BusinessEntities
 		[MainCategory]
 		public string Headline { get; set; }
 
+		private string _story;
+
 		/// <summary>
 		/// News text.
 		/// </summary>
@@ -92,7 +95,7 @@ namespace StockSharp.BusinessEntities
 		[MainCategory]
 		public string Story
 		{
-			get { return _story; }
+			get => _story;
 			set
 			{
 				_story = value;
@@ -128,10 +131,20 @@ namespace StockSharp.BusinessEntities
 		[Url]
 		public Uri Url { get; set; }
 
-		[field: NonSerialized]
-		private IDictionary<object, object> _extensionInfo;
+		/// <summary>
+		/// News priority.
+		/// </summary>
+		[DataMember]
+		[Display(
+			ResourceType = typeof(LocalizedStrings),
+			Name = LocalizedStrings.PriorityKey,
+			Description = LocalizedStrings.NewsPriorityKey,
+			GroupName = LocalizedStrings.GeneralKey)]
+		[Nullable]
+		public NewsPriorities? Priority { get; set; }
 
-		private string _story;
+		[field: NonSerialized]
+		private IDictionary<string, object> _extensionInfo;
 
 		/// <summary>
 		/// Extended information.
@@ -144,10 +157,16 @@ namespace StockSharp.BusinessEntities
 		[DisplayNameLoc(LocalizedStrings.ExtendedInfoKey)]
 		[DescriptionLoc(LocalizedStrings.Str427Key)]
 		[MainCategory]
-		public IDictionary<object, object> ExtensionInfo
+		public IDictionary<string, object> ExtensionInfo
 		{
-			get { return _extensionInfo; }
-			set { _extensionInfo = value; }
+			get => _extensionInfo;
+			set => _extensionInfo = value;
+		}
+
+		/// <inheritdoc />
+		public override string ToString()
+		{
+			return $"{ServerTime} {Headline} {Story} {Source}";
 		}
 	}
 }

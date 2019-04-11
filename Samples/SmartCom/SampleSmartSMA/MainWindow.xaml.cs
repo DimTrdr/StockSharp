@@ -63,12 +63,12 @@ namespace SampleSmartSMA
 			_logManager.Listeners.Add(new GuiLogListener(LogControl));
 
 			_area = new ChartArea();
-			_chart.Areas.Add(_area);
+			Chart.Areas.Add(_area);
 		}
 
 		private void OrdersOrderSelected()
 		{
-			CancelOrders.IsEnabled = !_orders.SelectedOrders.IsEmpty();
+			CancelOrders.IsEnabled = !OrdersGrid.SelectedOrders.IsEmpty();
 		}
 
 		protected override void OnClosing(CancelEventArgs e)
@@ -113,12 +113,11 @@ namespace SampleSmartSMA
 
 						_candleManager = new CandleManager(_trader);
 
-						_trader.NewCandles += (series, candles) => _historyCandles.SyncDo(col =>
+						_trader.CandleSeriesProcessing += (series, candle) => _historyCandles.SyncDo(col =>
 						{
-							_historyCandles.AddRange(candles.Cast<TimeFrameCandle>());
+							_historyCandles.Add((TimeFrameCandle)candle);
 
-							foreach (var candle in candles)
-								ProcessCandle(candle);
+							ProcessCandle(candle);
 						});
 
 						_trader.NewSecurity += security =>
@@ -146,7 +145,7 @@ namespace SampleSmartSMA
 							{
 								// найти те сделки, которые совершила стратегия скользящей средней
 								if (_strategy.Orders.Contains(trade.Order))
-									_trades.Trades.Add(trade);
+									TradesGrid.Trades.Add(trade);
 							}
 						};
 
@@ -227,7 +226,7 @@ namespace SampleSmartSMA
 
 		private void CancelOrdersClick(object sender, RoutedEventArgs e)
 		{
-			_orders.SelectedOrders.ForEach(_trader.CancelOrder);
+			OrdersGrid.SelectedOrders.ForEach(_trader.CancelOrder);
 		}
 
 		private void StartClick(object sender, RoutedEventArgs e)
@@ -265,14 +264,14 @@ namespace SampleSmartSMA
 
 				_longMaElem = new ChartIndicatorElement
 				{
-					Title = LocalizedStrings.Long,
+					FullTitle = LocalizedStrings.Long,
 					Color = Colors.OrangeRed
 				};
 				_area.Elements.Add(_longMaElem);
 
 				_shortMaElem = new ChartIndicatorElement
 				{
-					Title = LocalizedStrings.Short,
+					FullTitle = LocalizedStrings.Short,
 					Color = Colors.RoyalBlue
 				};
 				_area.Elements.Add(_shortMaElem);
@@ -315,7 +314,7 @@ namespace SampleSmartSMA
 					.Add(_longMaElem, longValue)
 					.Add(_shortMaElem, shortValue);
 
-			_chart.Draw(chartData);
+			Chart.Draw(chartData);
 		}
 
 		private void ReportClick(object sender, RoutedEventArgs e)

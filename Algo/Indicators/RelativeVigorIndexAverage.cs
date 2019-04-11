@@ -16,12 +16,15 @@ Copyright 2010 by StockSharp, LLC
 namespace StockSharp.Algo.Indicators
 {
 	using System.Collections.Generic;
+	using System.ComponentModel;
 
 	using StockSharp.Algo.Candles;
 
 	/// <summary>
 	/// The weight-average part of indicator <see cref="RelativeVigorIndex"/>.
 	/// </summary>
+	[IndicatorIn(typeof(CandleIndicatorValue))]
+	[Browsable(false)]
 	public class RelativeVigorIndexAverage : LengthIndicator<decimal>
 	{
 		private readonly List<Candle> _buffer = new List<Candle>();

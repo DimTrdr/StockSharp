@@ -39,9 +39,10 @@ namespace SampleIB
 		private readonly TradesWindow _tradesWindow = new TradesWindow();
 		private readonly MyTradesWindow _myTradesWindow = new MyTradesWindow();
 		private readonly OrdersWindow _ordersWindow = new OrdersWindow();
-		private readonly ConditionOrdersWindow _conditionOrdersWindow = new ConditionOrdersWindow();
 		private readonly PortfoliosWindow _portfoliosWindow = new PortfoliosWindow();
+		private readonly StopOrdersWindow _stopOrdersWindow = new StopOrdersWindow();
 		private readonly NewsWindow _newsWindow = new NewsWindow();
+		private readonly ScannerWindow _scannerWindow;
 
 		private readonly LogManager _logManager = new LogManager();
 
@@ -53,12 +54,15 @@ namespace SampleIB
 			Title = Title.Put("Interactive Brokers");
 
 			_ordersWindow.MakeHideable();
-			_conditionOrdersWindow.MakeHideable();
 			_myTradesWindow.MakeHideable();
 			_tradesWindow.MakeHideable();
 			_securitiesWindow.MakeHideable();
 			_portfoliosWindow.MakeHideable();
+			_stopOrdersWindow.MakeHideable();
 			_newsWindow.MakeHideable();
+
+			_scannerWindow = new ScannerWindow();
+			_scannerWindow.MakeHideable();
 
 			Trader.LogLevel = LogLevels.Debug;
 			_logManager.Sources.Add(Trader);
@@ -70,19 +74,20 @@ namespace SampleIB
 		protected override void OnClosing(CancelEventArgs e)
 		{
 			_ordersWindow.DeleteHideable();
-			_conditionOrdersWindow.DeleteHideable();
 			_myTradesWindow.DeleteHideable();
 			_tradesWindow.DeleteHideable();
 			_securitiesWindow.DeleteHideable();
 			_portfoliosWindow.DeleteHideable();
+			_stopOrdersWindow.DeleteHideable();
 			_newsWindow.DeleteHideable();
-			
+			_scannerWindow.DeleteHideable();
+
 			_securitiesWindow.Close();
 			_tradesWindow.Close();
 			_myTradesWindow.Close();
 			_ordersWindow.Close();
-			_conditionOrdersWindow.Close();
 			_portfoliosWindow.Close();
+			_stopOrdersWindow.Close();
 			_newsWindow.Close();
 
 			if (Trader != null)
@@ -129,19 +134,15 @@ namespace SampleIB
 						Trader.MarketDataSubscriptionFailed += (security, msg, error) =>
 							this.GuiAsync(() => MessageBox.Show(this, error.ToString(), LocalizedStrings.Str2956Params.Put(msg.DataType, security)));
 
-						Trader.NewSecurity += security => _securitiesWindow.SecurityPicker.Securities.Add(security);
-						Trader.NewMyTrade += trade => _myTradesWindow.TradeGrid.Trades.Add(trade);
-						Trader.NewTrade += trade => _tradesWindow.TradeGrid.Trades.Add(trade);
-						Trader.NewOrder += order => _ordersWindow.OrderGrid.Orders.Add(order);
-						Trader.NewStopOrder += order => _conditionOrdersWindow.OrderGrid.Orders.Add(order);
-						Trader.NewCandles += _securitiesWindow.AddCandles;
+						Trader.NewSecurity += _securitiesWindow.SecurityPicker.Securities.Add;
+						Trader.NewMyTrade += _myTradesWindow.TradeGrid.Trades.Add;
+						Trader.NewTrade += _tradesWindow.TradeGrid.Trades.Add;
+						Trader.NewOrder += _ordersWindow.OrderGrid.Orders.Add;
+						Trader.NewStopOrder += _stopOrdersWindow.OrderGrid.Orders.Add;
+						Trader.CandleSeriesProcessing += _securitiesWindow.AddCandle;
 
-						Trader.NewPortfolio += portfolio =>
-						{
-							_portfoliosWindow.PortfolioGrid.Portfolios.Add(portfolio);
-							Trader.RegisterPortfolio(portfolio);
-						};
-						Trader.NewPosition += position => _portfoliosWindow.PortfolioGrid.Positions.Add(position);
+						Trader.NewPortfolio += _portfoliosWindow.PortfolioGrid.Portfolios.Add;
+						Trader.NewPosition += _portfoliosWindow.PortfolioGrid.Positions.Add;
 
 						// subscribe on error of order registration event
 						Trader.OrderRegisterFailed += _ordersWindow.OrderGrid.AddRegistrationFail;
@@ -191,8 +192,8 @@ namespace SampleIB
 			ConnectionStatus.Content = isConnected ? LocalizedStrings.Connected : LocalizedStrings.Disconnected;
 
 			ShowSecurities.IsEnabled = ShowTrades.IsEnabled = ShowNews.IsEnabled =
-            ShowMyTrades.IsEnabled = ShowOrders.IsEnabled =
-            ShowPortfolios.IsEnabled = isConnected;
+            ShowMyTrades.IsEnabled = ShowOrders.IsEnabled = ShowConditionOrders.IsEnabled =
+            ShowPortfolios.IsEnabled = ShowScanner.IsEnabled = isConnected;
 		}
 
 		private void ShowSecuritiesClick(object sender, RoutedEventArgs e)
@@ -222,12 +223,17 @@ namespace SampleIB
 
 		private void ShowConditionOrdersClick(object sender, RoutedEventArgs e)
 		{
-			ShowOrHide(_conditionOrdersWindow);
+			ShowOrHide(_stopOrdersWindow);
 		}
 
 		private void ShowNewsClick(object sender, RoutedEventArgs e)
 		{
 			ShowOrHide(_newsWindow);
+		}
+
+		private void ShowScannerClick(object sender, RoutedEventArgs e)
+		{
+			ShowOrHide(_scannerWindow);
 		}
 
 		private static void ShowOrHide(Window window)

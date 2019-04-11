@@ -73,17 +73,16 @@ namespace SampleStrategies
 			// ecng.serialization invoke in several places IStorage obj
 			ConfigManager.RegisterService(entityRegistry.Storage);
 
-			var storageRegistry = ConfigManager.GetService<IStorageRegistry>();
+			var storageRegistry = ServicesRegistry.StorageRegistry;
+			var snapshotRegistry = new SnapshotRegistry(Path.Combine("Data", "Snapshots"));
 
-			SerializationContext.DelayAction = entityRegistry.DelayAction = new DelayAction(entityRegistry.Storage, ex => ex.LogError());
-
-			Connector = new Connector(entityRegistry, storageRegistry);
+			Connector = new Connector(entityRegistry, storageRegistry, snapshotRegistry);
 			LogManager.Sources.Add(Connector);
 
-			InitConnector(entityRegistry);
+			InitConnector(entityRegistry, snapshotRegistry);
 		}
 
-		private void InitConnector(CsvEntityRegistry entityRegistry)
+		private void InitConnector(CsvEntityRegistry entityRegistry, SnapshotRegistry snapshotRegistry)
 		{
 			// subscribe on connection successfully event
 			Connector.Connected += () =>
@@ -128,12 +127,7 @@ namespace SampleStrategies
 
 			Connector.NewMyTrade += _myTradesWindow.TradeGrid.Trades.Add;
 
-			Connector.NewPortfolio += portfolio =>
-			{
-				_portfoliosWindow.PortfolioGrid.Portfolios.Add(portfolio);
-				Connector.RegisterPortfolio(portfolio);
-			};
-
+			Connector.NewPortfolio += _portfoliosWindow.PortfolioGrid.Portfolios.Add;
 			Connector.NewPosition += _portfoliosWindow.PortfolioGrid.Positions.Add;
 
 			// set market data provider
@@ -154,7 +148,9 @@ namespace SampleStrategies
 			entityRegistry.Init();
 
 			Connector.StorageAdapter.DaysLoad = TimeSpan.FromDays(3);
-			//Connector.StorageAdapter.Load();
+			//Connector.LookupAll();
+
+			snapshotRegistry.Init();
 
 			ConfigManager.RegisterService<IExchangeInfoProvider>(new StorageExchangeInfoProvider(entityRegistry));
 		}
@@ -175,7 +171,7 @@ namespace SampleStrategies
 
 			Connector.Dispose();
 
-			ConfigManager.GetService<IEntityRegistry>().DelayAction.WaitFlush();
+			ServicesRegistry.EntityRegistry.DelayAction.DefaultGroup.WaitFlush(true);
 
 			base.OnClosing(e);
 		}

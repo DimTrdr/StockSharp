@@ -8,16 +8,70 @@
 	    	 Предоставляется бесплатно и пожизненно всем желающим  Для этого необходимо только <externalLink>
 			<linkText>пройти регистрацию!</linkText>
 			<linkAlternateText>Регистрация в Stocksharp</linkAlternateText>
-			<linkUri>http://stocksharp.ru/register/</linkUri>
+			<linkUri>https://stocksharp.ru/register/</linkUri>
 			<linkTarget>_blank</linkTarget>
 			</externalLink>
-			 Эта лицензия включает <token>designer</token>, <token>hydra</token>, <token>stocksharpapi</token> 
-			 (<token>quik</token>, <token>alfa</token>, <token>smartcom</token>, <token>transaq</token>, <token>alor</token>,
-			 <token>openecry</token>, <token>IB</token>, <token>etrade</token>, <token>lmax</token>, <token>oanda</token>, 
-			 <token>blackwood</token>, <token>iqfeed</token>, <token>sterling</token>, <token>rithmic</token>, <token>cqg</token>, 
-			 <token>matlab</token>, <token>btce</token>, <token>bitstamp</token>, BarChart и RSS).
-		</para>
+			 Эта лицензия включает: </para>
+			 		<list class="ordered">
+  			<listItem>
+<token>designer</token>
+  			</listItem>
+  			<listItem>
+<token>hydra</token>
+  			</listItem>
+  			<listItem>
+<token>stocksharpapi</token>
+			 
+  			</listItem>
+		</list>
+
 		<para>Cм. также <link xlink:href="b9f672db-e0c9-4208-9759-179e5de17fd8">Установка StockSharp</link>.</para>
+		<para><legacyBold>
+Крипто-трейдер
+
+</legacyBold></para>
+		<para><token>Binance</token>,
+<token>Bitbank</token>,
+<token>Bitexbook</token>,
+<token>Bitfinex</token>,
+<token>Bithumb</token>,
+<token>BitStamp</token>,
+<token>Bitmex</token>,
+<token>Bittrex</token>,
+<token>Btce</token>,
+<token>Cex</token>,
+<token>Coinbase</token>,
+<token>Coincheck</token>,
+<token>CoinExchange</token>,
+<token>CoinCap</token>,
+<token>Coinigy</token>,
+<token>Cryptopia</token>,
+<token>Deribit</token>,
+<token>Exmo</token>,
+<token>Digifinex</token>,
+<token>Gdax</token>,
+<token>HitBtc</token>,
+<token>Huobi</token>,
+<token>Idax</token>,
+<token>Kraken</token>,
+<token>Kucoin</token>,
+<token>Liqui</token>,
+<token>LiveCoin</token>,
+<token>Okcoin</token>,
+<token>Okex</token>,
+<token>Poloniex</token>,
+<token>Quoinex</token>,
+<token>TradeOgre</token>,
+<token>Yobit</token>,
+<token>Zaif</token>,
+<token>LBank</token>,
+<token>BitMax</token>,
+<token>BW</token>,
+<token>Bibox</token>,
+<token>CoinBene</token>,
+<token>BitZ</token>,
+<token>ZB</token></para>
+  		
 		<para><legacyBold>Расширенная лицензия</legacyBold></para>
 		<list class="ordered">
   			<listItem>
@@ -36,7 +90,7 @@
   				<para>S#.Data server.</para>
   			</listItem>
 			<listItem>
-  				<para>S#.Shell исходные коды.</para>
+  				<para><token>stocksharpshell</token> исходные коды.</para>
   			</listItem>
   			<listItem>
   				<para>Расширенные примеры.</para>
@@ -77,13 +131,8 @@
 
 		<para><legacyBold>Корпоративная плюс</legacyBold></para>
 		<para>Включает в себя исходные коды любого из наших готовых программных решений 
-		(<token>hydra</token>, <token>designer</token>,   			<externalLink>
-				<linkText>S#.Shell</linkText>
-				<linkAlternateText>Каркас для торговых стратегий</linkAlternateText>
-				<linkUri>http://stocksharp.ru/products/shell/</linkUri>
-				<linkTarget>_blank</linkTarget>
-			</externalLink>),
-		а также исходные коды самой платформы: S#.API.</para>
+		(<token>hydra</token>, <token>designer</token>, <token>stocksharpshell</token>),
+		а также исходные коды самой платформы: <token>stocksharpapi</token>.</para>
 
 		<para>
   			Подробную информацию о лицензиях см. <token>stocksharppricing</token>.
@@ -92,18 +141,6 @@
 	</introduction>
 	
 	 <relatedTopics>
-     		<!--<externalLink>
-			<linkText>Новые подходы к лицензированию</linkText>
-			<linkAlternateText>Лицензирование</linkAlternateText>
-			<linkUri>http://stocksharp.ru/news/264/novye-podhody-k-litsenzirovaniyu/</linkUri>
-			<linkTarget>_blank</linkTarget>
-		</externalLink>
-		<externalLink>
-			<linkText>Стоимость лицензий StockSharp</linkText>
-			<linkAlternateText>Стоимость лицензий</linkAlternateText>
-			<linkUri>http://stocksharp.ru/products/pricing/</linkUri>
-			<linkTarget>_blank</linkTarget>
-		</externalLink>-->
      	</relatedTopics>
 	</developerWalkthroughDocument>
 </topic>

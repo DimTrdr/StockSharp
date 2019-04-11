@@ -17,7 +17,6 @@ namespace SampleAlfaCandles
 {
 	using System;
 	using System.ComponentModel;
-	using System.Linq;
 	using System.Windows;
 
 	using Ecng.Common;
@@ -43,8 +42,8 @@ namespace SampleAlfaCandles
 			HistoryInterval.ItemsSource = AlfaTimeFrames.AllTimeFrames;
 
 			HistoryInterval.SelectedIndex = 2;
-			From.Value = DateTime.Today - TimeSpan.FromDays(7);
-			To.Value = DateTime.Now;
+			From.EditValue = DateTime.Today - TimeSpan.FromDays(7);
+			To.EditValue = DateTime.Now;
 
 			_logManager.Listeners.Add(new FileLogListener());
 		}
@@ -74,8 +73,6 @@ namespace SampleAlfaCandles
 			};
 
 			Security.SecurityProvider = new FilterableSecurityProvider(_trader);
-
-			_trader.NewPortfolio += _trader.RegisterPortfolio;
 
 			_trader.Connected += () =>
 			{
@@ -110,8 +107,8 @@ namespace SampleAlfaCandles
 
 			var timeFrame = (TimeSpan)HistoryInterval.SelectedItem;
 
-			var from = From.Value ?? DateTimeOffset.MinValue;
-			var to = RealTime.IsChecked == true ? DateTimeOffset.MaxValue : To.Value ?? DateTimeOffset.MaxValue;
+			var from = (DateTime?)From.EditValue;
+			var to = RealTime.IsChecked == true ? null : (DateTime?)To.EditValue;
 
 			if (from > to)
 			{
@@ -132,12 +129,12 @@ namespace SampleAlfaCandles
 				CandleType = typeof(TimeFrameCandle)
 			};
 
-			_trader.NewCandles += (candleSeries, candles) =>
+			_trader.CandleSeriesProcessing += (candleSeries, candle) =>
 			{
-				_trader.AddInfoLog("newcandles({0}):\n{1}", candles.Count(), candles.Select(c => c.ToString()).Join("\n"));
+				_trader.AddInfoLog("New сandle({0})", candle);
 
 				if (candleSeries == series)
-					wnd.DrawCandles(candles);
+					wnd.DrawCandles(candle);
 			};
 
 			_trader.SubscribeCandles(series, from, to);

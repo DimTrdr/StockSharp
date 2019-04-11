@@ -137,17 +137,13 @@ namespace SampleSmart
 					Trader.MarketDataSubscriptionFailed += (security, msg, error) =>
 						this.GuiAsync(() => MessageBox.Show(this, error.ToString(), LocalizedStrings.Str2956Params.Put(msg.DataType, security)));
 
-					Trader.NewSecurity += security => _securitiesWindow.SecurityPicker.Securities.Add(security);
-					Trader.NewMyTrade += trade => _myTradesWindow.TradeGrid.Trades.Add(trade);
-					Trader.NewTrade += trade => _tradesWindow.TradeGrid.Trades.Add(trade);
-					Trader.NewOrder += order => _ordersWindow.OrderGrid.Orders.Add(order);
-					Trader.NewStopOrder += order => _stopOrdersWindow.OrderGrid.Orders.Add(order);
-					Trader.NewPortfolio += portfolio =>
-					{
-						_portfoliosWindow.PortfolioGrid.Portfolios.Add(portfolio);
-						Trader.RegisterPortfolio(portfolio);
-					};
-					Trader.NewPosition += position => _portfoliosWindow.PortfolioGrid.Positions.Add(position);
+					Trader.NewSecurity += _securitiesWindow.SecurityPicker.Securities.Add;
+					Trader.NewMyTrade += _myTradesWindow.TradeGrid.Trades.Add;
+					Trader.NewTrade += _tradesWindow.TradeGrid.Trades.Add;
+					Trader.NewOrder += _ordersWindow.OrderGrid.Orders.Add;
+					Trader.NewStopOrder += _stopOrdersWindow.OrderGrid.Orders.Add;
+					Trader.NewPortfolio += _portfoliosWindow.PortfolioGrid.Portfolios.Add;
+					Trader.NewPosition += _portfoliosWindow.PortfolioGrid.Positions.Add;
 
 					// подписываемся на событие о неудачной регистрации заявок
 					Trader.OrderRegisterFailed += _ordersWindow.OrderGrid.AddRegistrationFail;
@@ -175,7 +171,7 @@ namespace SampleSmart
 				Trader.Address = Address.SelectedAddress;
 
 				// применить нужную версию SmartCOM
-				Trader.Version = IsSmartCom3.IsChecked == true ? SmartComVersions.V3 : SmartComVersions.V2;
+				Trader.Version = IsSmartCom4.IsChecked == true ? SmartComVersions.V4 : SmartComVersions.V3;
 
 				// очищаем из текстового поля в целях безопасности
 				//Password.Clear();

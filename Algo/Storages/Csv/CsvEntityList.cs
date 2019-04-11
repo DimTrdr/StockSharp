@@ -5,28 +5,36 @@ namespace StockSharp.Algo.Storages.Csv
 	using System.Globalization;
 	using System.IO;
 	using System.Linq;
-	using System.Text;
 
 	using Ecng.Collections;
 	using Ecng.Common;
 	using Ecng.Serialization;
 
 	/// <summary>
+	/// The interface for presentation in the form of list of trade objects, received from the external storage.
+	/// </summary>
+	public interface ICsvEntityList
+	{
+		/// <summary>
+		/// The time delayed action.
+		/// </summary>
+		DelayAction DelayAction { get; set; }
+
+		/// <summary>
+		/// Initialize the storage.
+		/// </summary>
+		/// <param name="errors">Possible errors.</param>
+		void Init(IList<Exception> errors);
+	}
+
+	/// <summary>
 	/// List of trade objects, received from the CSV storage.
 	/// </summary>
 	/// <typeparam name="T">Entity type.</typeparam>
-	public abstract class CsvEntityList<T> : SynchronizedList<T>, IStorageEntityList<T>
+	public abstract class CsvEntityList<T> : SynchronizedList<T>, IStorageEntityList<T>, ICsvEntityList
 		where T : class
 	{
-		private readonly string _fileName;
-		private readonly Encoding _encoding;
-
-		private readonly CachedSynchronizedDictionary<object, T> _items = new CachedSynchronizedDictionary<object, T>();
-		private readonly List<T> _addedItems = new List<T>();
-		private readonly SyncObject _syncRoot = new SyncObject();
-
-		private bool _isChanged;
-		private bool _isFullChanged;
+		private readonly Dictionary<object, T> _items = new Dictionary<object, T>();
 
 		/// <summary>
 		/// The CSV storage of trading objects.
@@ -38,54 +46,125 @@ namespace StockSharp.Algo.Storages.Csv
 		/// </summary>
 		/// <param name="registry">The CSV storage of trading objects.</param>
 		/// <param name="fileName">CSV file name.</param>
-		/// <param name="encoding">CSV encoding.</param>
-		protected CsvEntityList(CsvEntityRegistry registry, string fileName, Encoding encoding)
+		protected CsvEntityList(CsvEntityRegistry registry, string fileName)
 		{
-			if (registry == null)
-				throw new ArgumentNullException(nameof(registry));
-
 			if (fileName == null)
 				throw new ArgumentNullException(nameof(fileName));
 
-			if (encoding == null)
-				throw new ArgumentNullException(nameof(encoding));
+			Registry = registry ?? throw new ArgumentNullException(nameof(registry));
 
-			Registry = registry;
-
-			_fileName = System.IO.Path.Combine(Registry.Path, fileName);
-			_encoding = encoding;
+			FileName = Path.Combine(Registry.Path, fileName);
 		}
+
+		/// <summary>
+		/// CSV file name.
+		/// </summary>
+		public string FileName { get; }
 
 		#region IStorageEntityList<T>
 
-		DelayAction IStorageEntityList<T>.DelayAction { get; set; }
+		private DelayAction.IGroup<CsvFileWriter> _delayActionGroup;
+		private DelayAction _delayAction;
+
+		/// <summary>
+		/// The time delayed action.
+		/// </summary>
+		public DelayAction DelayAction
+		{
+			get => _delayAction;
+			set
+			{
+				if (_delayAction == value)
+					return;
+
+				if (_delayAction != null)
+				{
+					_delayAction.DeleteGroup(_delayActionGroup);
+					_delayActionGroup = null;
+				}
+
+				_delayAction = value;
+
+				if (_delayAction != null)
+				{
+					_delayActionGroup = _delayAction.CreateGroup(() =>
+					{
+						var stream = new TransactionFileStream(FileName, FileMode.OpenOrCreate);
+						stream.Seek(0, SeekOrigin.End);
+						return new CsvFileWriter(stream, Registry.Encoding);
+					});
+				}
+			}
+		}
+
+		/// <inheritdoc />
+		void IStorageEntityList<T>.WaitFlush()
+		{
+			_delayActionGroup?.WaitFlush(false);
+		}
 
 		T IStorageEntityList<T>.ReadById(object id)
 		{
-			return _items.TryGetValue(id);
+			lock (SyncRoot)
+				return _items.TryGetValue(NormalizedKey(id));
 		}
 
-		IEnumerable<T> IStorageEntityList<T>.ReadLasts(int count)
+		private object GetNormalizedKey(T entity)
 		{
-			return _items.CachedValues.Skip(Count - count).Take(count);
+			return NormalizedKey(GetKey(entity));
+		}
+
+		private static object NormalizedKey(object key)
+		{
+			if (key is string str)
+				return str.ToLowerInvariant();
+
+			return key;
+		}
+
+		/// <inheritdoc />
+		public void Save(T entity)
+		{
+			Save(entity, false);
 		}
 
 		/// <summary>
 		/// Save object into storage.
 		/// </summary>
 		/// <param name="entity">Trade object.</param>
-		public void Save(T entity)
+		/// <param name="forced">Forced update.</param>
+		public virtual void Save(T entity, bool forced)
 		{
-			var key = GetKey(entity);
-			var item = _items.TryGetValue(key);
+			lock (SyncRoot)
+			{
+				var item = _items.TryGetValue(GetNormalizedKey(entity));
 
-			if (item == null)
-				Add(entity);
-			else
-				Write();
+				if (item == null)
+				{
+					Add(entity);
+					return;
+				}
+				else if (IsChanged(entity, forced))
+					UpdateCache(entity);
+				else
+					return;
+
+				WriteMany(_items.Values.ToArray());
+			}
 		}
 
 		#endregion
+
+		/// <summary>
+		/// Is <paramref name="entity"/> changed.
+		/// </summary>
+		/// <param name="entity">Trade object.</param>
+		/// <param name="forced">Forced update.</param>
+		/// <returns>Is changed.</returns>
+		protected virtual bool IsChanged(T entity, bool forced)
+		{
+			return true;
+		}
 
 		/// <summary>
 		/// Get key from trade object.
@@ -111,13 +190,32 @@ namespace StockSharp.Algo.Storages.Csv
 		/// <summary>
 		/// 
 		/// </summary>
-		/// <param name="item">Trade object.</param>
-		protected override void OnAdded(T item)
+		/// <param name="item"></param>
+		/// <returns></returns>
+		public override bool Contains(T item)
 		{
-			base.OnAdded(item);
+			lock (SyncRoot)
+				return _items.ContainsKey(GetNormalizedKey(item));
+		}
 
-			if (_items.TryAdd(GetKey(item), item))
-				Write(item);
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="item">Trade object.</param>
+		/// <returns></returns>
+		protected override bool OnAdding(T item)
+		{
+			lock (SyncRoot)
+			{
+				if (!_items.TryAdd(GetNormalizedKey(item), item))
+					return false;
+
+				AddCache(item);
+
+				_delayActionGroup.Add(Write, item);
+			}
+
+			return base.OnAdding(item);
 		}
 
 		/// <summary>
@@ -128,8 +226,13 @@ namespace StockSharp.Algo.Storages.Csv
 		{
 			base.OnRemoved(item);
 
-			_items.Remove(GetKey(item));
-			Write();
+			lock (SyncRoot)
+			{
+				_items.Remove(GetNormalizedKey(item));
+				RemoveCache(item);
+
+				WriteMany(_items.Values.ToArray());
+			}
 		}
 
 		/// <summary>
@@ -139,117 +242,152 @@ namespace StockSharp.Algo.Storages.Csv
 		{
 			base.OnCleared();
 
-			_items.Clear();
-			Write();
-		}
-
-		private void Write()
-		{
-			lock (_syncRoot)
+			lock (SyncRoot)
 			{
-				_isChanged = true;
-				_isFullChanged = true;
-			}
+				_items.Clear();
+				ClearCache();
 
-			Registry.TryCreateTimer();
+				_delayActionGroup.Add(writer => writer.Writer.Truncate());
+			}
 		}
 
-		private void Write(T entity)
+		/// <summary>
+		/// Write data into storage.
+		/// </summary>
+		/// <param name="values">Trading objects.</param>
+		private void WriteMany(T[] values)
 		{
-			lock (_syncRoot)
+			_delayActionGroup.Add((writer, state) =>
 			{
-				_isChanged = true;
-				_addedItems.Add(entity);
-			}
+				writer.Writer.Truncate();
 
-			Registry.TryCreateTimer();
+				foreach (var item in state)
+					Write(writer, item);
+			}, values, compareStates: (v1, v2) =>
+			{
+				if (v1 == null)
+					return v2 == null;
+
+				if (v2 == null)
+					return false;
+
+				if (v1.Length != v2.Length)
+					return false;
+
+				return v1.SequenceEqual(v2);
+			});
 		}
 
-		internal void ReadItems(List<Exception> errors)
+		void ICsvEntityList.Init(IList<Exception> errors)
 		{
-			if (!File.Exists(_fileName))
+			if (errors == null)
+				throw new ArgumentNullException(nameof(errors));
+
+			if (!File.Exists(FileName))
 				return;
 
 			CultureInfo.InvariantCulture.DoInCulture(() =>
 			{
-				using (var stream = new FileStream(_fileName, FileMode.OpenOrCreate))
+				using (var stream = new FileStream(FileName, FileMode.OpenOrCreate, FileAccess.ReadWrite))
 				{
-					var reader = new FastCsvReader(stream, _encoding);
+					var reader = new FastCsvReader(stream, Registry.Encoding);
+
+					var hasDuplicates = false;
+					var currErrors = 0;
 
 					while (reader.NextLine())
 					{
 						try
 						{
 							var item = Read(reader);
-							var key = GetKey(item);
+							var key = GetNormalizedKey(item);
 
-							_items.Add(key, item);
-							Add(item);
+							lock (SyncRoot)
+							{
+								if (_items.TryAdd(key, item))
+								{
+									InnerCollection.Add(item);
+									AddCache(item);
+								}
+								else
+									hasDuplicates = true;
+							}
+
+							currErrors = 0;
 						}
 						catch (Exception ex)
 						{
-							if (errors.Count < 10)
+							if (errors.Count < 100)
 								errors.Add(ex);
-							else
+
+							currErrors++;
+							
+							if (currErrors >= 1000)
 								break;
 						}
 					}
+
+					if (!hasDuplicates)
+						return;
+
+					try
+					{
+						lock (SyncRoot)
+						{
+							stream.SetLength(0);
+
+							using (var writer = new CsvFileWriter(stream, Registry.Encoding))
+							{
+								foreach (var item in InnerCollection)
+									Write(writer, item);
+							}
+						}
+					}
+					catch (Exception ex)
+					{
+						errors.Add(ex);
+					}
 				}
 			});
+
+			InnerCollection.ForEach(OnAdded);
 		}
 
-		internal bool Flush()
+		/// <summary>
+		/// Clear cache.
+		/// </summary>
+		protected virtual void ClearCache()
 		{
-			bool isChanged;
-			bool isFullChanged;
-
-			var addedItems = ArrayHelper.Empty<T>();
-
-			lock (_syncRoot)
-			{
-				isChanged = _isChanged;
-				isFullChanged = _isFullChanged;
-
-				_isChanged = false;
-
-				if (!isChanged)
-				{
-					_isFullChanged = false;
-					addedItems = _addedItems.CopyAndClear();
-				}
-			}
-
-			if (isChanged)
-				return false;
-
-			if (isFullChanged)
-			{
-				Write(_items.CachedValues, false, true);
-			}
-			else if (addedItems.Length > 0)
-			{
-				Write(addedItems, true, false);
-			}
-
-			return true;
 		}
 
-		private void Write(IEnumerable<T> items, bool append, bool clear)
+		/// <summary>
+		/// Add item to cache.
+		/// </summary>
+		/// <param name="item">New item.</param>
+		protected virtual void AddCache(T item)
 		{
-			using (var stream = new FileStream(_fileName, FileMode.OpenOrCreate))
-			{
-				if (clear)
-					stream.SetLength(0);
+		}
 
-				if (append)
-					stream.Position = stream.Length;
+		/// <summary>
+		/// Update item in cache.
+		/// </summary>
+		/// <param name="item">Item.</param>
+		protected virtual void UpdateCache(T item)
+		{
+		}
 
-				using (var writer = new CsvFileWriter(stream, _encoding))
-				{
-					foreach (var item in items)
-						Write(writer, item);
-				}
-			}
+		/// <summary>
+		/// Remove item from cache.
+		/// </summary>
+		/// <param name="item">Item.</param>
+		protected virtual void RemoveCache(T item)
+		{
+		}
+
+		/// <inheritdoc />
+		public override string ToString()
+		{
+			return FileName;
 		}
 	}
 }

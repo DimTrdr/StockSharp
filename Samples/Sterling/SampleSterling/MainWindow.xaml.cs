@@ -34,12 +34,12 @@ namespace SampleSterling
 		public static MainWindow Instance { get; private set; }
 
 		public static readonly DependencyProperty IsConnectedProperty = 
-				DependencyProperty.Register("IsConnected", typeof(bool), typeof(MainWindow), new PropertyMetadata(default(bool)));
+				DependencyProperty.Register(nameof(IsConnected), typeof(bool), typeof(MainWindow), new PropertyMetadata(default(bool)));
 
 		public bool IsConnected
 		{
-			get { return (bool)GetValue(IsConnectedProperty); }
-			set { SetValue(IsConnectedProperty, value); }
+			get => (bool)GetValue(IsConnectedProperty);
+			set => SetValue(IsConnectedProperty, value);
 		}
 
 		public SterlingTrader Trader { get; private set; }
@@ -72,7 +72,7 @@ namespace SampleSterling
 			var guiListener = new GuiLogListener(LogControl);
 			//guiListener.Filters.Add(msg => msg.Level > LogLevels.Debug);
 			_logManager.Listeners.Add(guiListener);
-			_logManager.Listeners.Add(new FileLogListener("sterling") { LogDirectory = "Logs" });
+			_logManager.Listeners.Add(new FileLogListener { LogDirectory = "Logs" });
 
 			Application.Current.MainWindow = this;
 		}
@@ -134,18 +134,12 @@ namespace SampleSterling
 					Trader.MarketDataSubscriptionFailed += (security, msg, error) =>
 						this.GuiAsync(() => MessageBox.Show(this, error.ToString(), LocalizedStrings.Str2956Params.Put(msg.DataType, security)));
 
-					Trader.NewSecurity += security => _securitiesWindow.SecurityPicker.Securities.Add(security);
-					Trader.NewMyTrade += trade => _myTradesWindow.TradeGrid.Trades.Add(trade);
-					Trader.NewOrder += order => _ordersWindow.OrderGrid.Orders.Add(order);
-					Trader.NewStopOrder += order => _stopOrdersWindow.OrderGrid.Orders.Add(order);
-					Trader.NewPortfolio += portfolio =>
-					{
-						_portfoliosWindow.PortfolioGrid.Portfolios.Add(portfolio);
-
-						// subscribe on portfolio updates
-						Trader.RegisterPortfolio(portfolio);
-					};
-					Trader.NewPosition += position => _portfoliosWindow.PortfolioGrid.Positions.Add(position);
+					Trader.NewSecurity += _securitiesWindow.SecurityPicker.Securities.Add;
+					Trader.NewMyTrade += _myTradesWindow.TradeGrid.Trades.Add;
+					Trader.NewOrder += _ordersWindow.OrderGrid.Orders.Add;
+					Trader.NewStopOrder += _stopOrdersWindow.OrderGrid.Orders.Add;
+					Trader.NewPortfolio += _portfoliosWindow.PortfolioGrid.Portfolios.Add;
+					Trader.NewPosition += _portfoliosWindow.PortfolioGrid.Positions.Add;
 
 					// subscribe on error of order registration event
 					Trader.OrderRegisterFailed += _ordersWindow.OrderGrid.AddRegistrationFail;
@@ -160,7 +154,7 @@ namespace SampleSterling
 					Trader.MassOrderCancelFailed += (transId, error) =>
 						this.GuiAsync(() => MessageBox.Show(this, error.ToString(), LocalizedStrings.Str716));
 
-					Trader.NewNews += news =>  _newsWindow.NewsPanel.NewsGrid.News.Add(news);
+					Trader.NewNews += _newsWindow.NewsPanel.NewsGrid.News.Add;
 
 					// set market data provider
 					_securitiesWindow.SecurityPicker.MarketDataProvider = Trader;
@@ -250,7 +244,7 @@ namespace SampleSterling
 				SecurityId = new SecurityId
 				{
 					SecurityCode = "AAPL",
-					BoardCode = "All",
+					BoardCode = MessageAdapter.DefaultAssociatedBoardCode,
 				},
 				Name = "AAPL",
 				SecurityType = SecurityTypes.Stock,
@@ -272,7 +266,7 @@ namespace SampleSterling
 				SecurityId = new SecurityId
 				{
 					SecurityCode = "IBM",
-					BoardCode = "All",
+					BoardCode = MessageAdapter.DefaultAssociatedBoardCode,
 				},
 				Name = "IBM",
 				SecurityType = SecurityTypes.Stock,

@@ -1,4 +1,4 @@
-#region S# License
+﻿#region S# License
 /******************************************************************************************
 NOTICE!!!  This program and source code is owned and licensed by
 StockSharp, LLC, www.stocksharp.com
@@ -17,15 +17,17 @@ namespace SampleMicex
 {
 	using System;
 	using System.ComponentModel;
-	using System.Net;
+	using System.IO;
 	using System.Windows;
 
 	using Ecng.Common;
+	using Ecng.Serialization;
 	using Ecng.Xaml;
 
 	using StockSharp.BusinessEntities;
 	using StockSharp.Micex;
 	using StockSharp.Localization;
+	using StockSharp.Logging;
 
 	public partial class MainWindow
 	{
@@ -41,6 +43,8 @@ namespace SampleMicex
 		private readonly PortfoliosWindow _portfoliosWindow = new PortfoliosWindow();
 		private readonly NewsWindow _newsWindow = new NewsWindow();
 
+		private const string _settingsFile = "settings.xml";
+
 		public MainWindow()
 		{
 			InitializeComponent();
@@ -54,6 +58,17 @@ namespace SampleMicex
 			_securitiesWindow.MakeHideable();
 			_portfoliosWindow.MakeHideable();
 			_newsWindow.MakeHideable();
+
+			if (File.Exists(_settingsFile))
+			{
+				var ctx = new ContinueOnExceptionContext();
+				ctx.Error += ex => ex.LogError();
+
+				using (new Scope<ContinueOnExceptionContext> (ctx))
+					Trader.Load(new XmlSerializer<SettingsStorage>().Deserialize(_settingsFile));
+			}
+
+			Settings.SelectedObject = Trader.MarketDataAdapter;
 		}
 
 		protected override void OnClosing(CancelEventArgs e)
@@ -86,17 +101,6 @@ namespace SampleMicex
 			{
 				if (!_isConnected)
 				{
-					// создаем подключение
-					Trader.Addresses = new[] { Address.Text.To<EndPoint>() };
-					Trader.Server = Server.Text;
-					Trader.Login = Login.Text;
-					Trader.CompressionLevel = (CompressionLevels)Compression.SelectedValue;
-					Trader.Interface = Interface.Text;
-					Trader.OrderBookDepth = Depth.Text.To<int>();
-
-					if (!Password.Password.IsEmpty())
-						Trader.Password = Password.Password;
-	
 					if (!_initialized)
 					{
 						_initialized = true;
@@ -146,12 +150,12 @@ namespace SampleMicex
 							_securitiesWindow.SecurityPicker.Securities.Add(security);
 						};
 
-						Trader.NewTrade += trade => _tradesWindow.TradeGrid.Trades.Add(trade);
-						Trader.NewOrder += order => _ordersWindow.OrderGrid.Orders.Add(order);
-						Trader.NewMyTrade += trade => _myTradesWindow.TradeGrid.Trades.Add(trade);
+						Trader.NewTrade += _tradesWindow.TradeGrid.Trades.Add;
+						Trader.NewOrder += _ordersWindow.OrderGrid.Orders.Add;
+						Trader.NewMyTrade += _myTradesWindow.TradeGrid.Trades.Add;
 
-						Trader.NewPortfolio += portfolio => _portfoliosWindow.PortfolioGrid.Portfolios.Add(portfolio);
-						Trader.NewPosition += position => _portfoliosWindow.PortfolioGrid.Positions.Add(position);
+						Trader.NewPortfolio += _portfoliosWindow.PortfolioGrid.Portfolios.Add;
+						Trader.NewPosition += _portfoliosWindow.PortfolioGrid.Positions.Add;
 
 						// подписываемся на событие о неудачной регистрации заявок
 						Trader.OrderRegisterFailed += _ordersWindow.OrderGrid.AddRegistrationFail;
@@ -169,6 +173,8 @@ namespace SampleMicex
 						// set news provider
 						_newsWindow.NewsPanel.NewsProvider = Trader;
 					}
+
+					new XmlSerializer<SettingsStorage>().Serialize(Trader.Save(), _settingsFile);
 
 					Trader.Connect();
 				}

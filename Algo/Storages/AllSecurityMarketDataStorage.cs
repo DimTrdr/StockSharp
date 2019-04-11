@@ -21,7 +21,6 @@ namespace StockSharp.Algo.Storages
 	using System.IO;
 	using System.Linq;
 
-	using Ecng.Collections;
 	using Ecng.Interop;
 
 	using StockSharp.Algo.Candles;
@@ -31,14 +30,6 @@ namespace StockSharp.Algo.Storages
 	class AllSecurityMarketDataStorage<T> : IMarketDataStorage<T>, IMarketDataStorageInfo<T>
 		where T : Message
 	{
-		private sealed class BasketEnumerable : SimpleEnumerable<T>
-		{
-			public BasketEnumerable(Func<IEnumerator<T>> createEnumerator)
-				: base(createEnumerator)
-			{
-			}
-		}
-
 		private readonly Security _security;
 		private readonly IExchangeInfoProvider _exchangeInfoProvider;
 		private readonly BasketMarketDataStorage<T> _basket;
@@ -78,9 +69,7 @@ namespace StockSharp.Algo.Storages
 
 			_basket = new BasketMarketDataStorage<T>();
 
-			var idGenerator = new SecurityIdGenerator();
-
-			var id = idGenerator.Split(security.Id);
+			var id = security.Id.ToSecurityId();
 			var code = id.SecurityCode;
 
 			var securities = InteropHelper
@@ -88,7 +77,7 @@ namespace StockSharp.Algo.Storages
 				.Select(p => Path.GetFileName(p).FolderNameToSecurityId())
 				.Select(s =>
 				{
-					var idInfo = idGenerator.Split(s);
+					var idInfo = s.ToSecurityId();
 
 					var clone = security.Clone();
 					clone.Id = s;
@@ -171,7 +160,7 @@ namespace StockSharp.Algo.Storages
 		/// <returns>Data. If there is no data, the empty set will be returned.</returns>
 		public IEnumerable<T> Load(DateTime date)
 		{
-			return new BasketEnumerable(() => _basket.Load(date));
+			return _basket.Load(date);
 		}
 
 		private readonly Func<T, DateTimeOffset> _getTime;

@@ -17,13 +17,18 @@ namespace SamplePlaza
 {
 	using System;
 	using System.ComponentModel;
+	using System.IO;
 	using System.Linq;
 	using System.Net;
 	using System.Windows;
 
 	using Ecng.Common;
+	using Ecng.Configuration;
 	using Ecng.Xaml;
 
+	using StockSharp.Algo;
+	using StockSharp.Algo.Storages;
+	using StockSharp.Algo.Storages.Csv;
 	using StockSharp.BusinessEntities;
 	using StockSharp.Logging;
 	using StockSharp.Plaza;
@@ -44,6 +49,9 @@ namespace SamplePlaza
 		private readonly PortfoliosWindow _portfoliosWindow = new PortfoliosWindow();
 
 		private readonly LogManager _logManager = new LogManager();
+		private readonly CsvEntityRegistry _entityRegistry;
+		private readonly IStorageRegistry _storageRegistry;
+		private readonly SnapshotRegistry _snapshotRegistry;
 
 		public MainWindow()
 		{
@@ -59,7 +67,22 @@ namespace SamplePlaza
 			_securitiesWindow.MakeHideable();
 			_portfoliosWindow.MakeHideable();
 
-			AppName.Text = Trader.AppName;
+			const string dataPath = "Data";
+
+			_entityRegistry = new CsvEntityRegistry(dataPath);
+
+			ConfigManager.RegisterService<IEntityRegistry>(_entityRegistry);
+			// ecng.serialization invoke in several places IStorage obj
+			ConfigManager.RegisterService(_entityRegistry.Storage);
+
+			_storageRegistry = new StorageRegistry
+			{
+				DefaultDrive = new LocalMarketDataDrive(dataPath)
+			};
+
+			_snapshotRegistry = new SnapshotRegistry(Path.Combine(dataPath, "Snapshots"));
+
+			//AppName.Text = Trader.AppName;
 
 			Tables.SelectedTables = Trader.Tables.Select(t => t.Id);
 
@@ -84,6 +107,8 @@ namespace SamplePlaza
 			_portfoliosWindow.Close();
 
 			Trader.Dispose();
+
+			_entityRegistry.DelayAction.DefaultGroup.WaitFlush(true);
 
 			base.OnClosing(e);
 		}
@@ -120,16 +145,15 @@ namespace SamplePlaza
 						var revisionManager = Trader.StreamManager.RevisionManager;
 
 						//revisionManager.Tables.Add(Trader.TableRegistry.IndexLog);
-						revisionManager.Tables.Add(Trader.TableRegistry.TradeFuture);
-						revisionManager.Tables.Add(Trader.TableRegistry.TradeOption);
+						revisionManager.Tables.Add(Trader.TableRegistry.AnonymousDeal);
 
 						Trader.Tables.Clear();
 						Trader.TableRegistry.SyncTables(Tables.SelectedTables);
 
-						if (Trader.Tables.Contains(Trader.TableRegistry.AnonymousOrdersLog))
-						{
-							Trader.CreateDepthFromOrdersLog = true;
-						}
+						//if (Trader.Tables.Contains(Trader.TableRegistry.AnonymousOrdersLog))
+						//{
+						//	Trader.CreateDepthFromOrdersLog = true;
+						//}
 
 						Trader.ReConnectionSettings.AttemptCount = -1;
 						Trader.Restored += () => this.GuiAsync(() => MessageBox.Show(this, LocalizedStrings.Str2958));
@@ -158,14 +182,14 @@ namespace SamplePlaza
 						Trader.MarketDataSubscriptionFailed += (security, msg, error) =>
 							this.GuiAsync(() => MessageBox.Show(this, error.ToString(), LocalizedStrings.Str2956Params.Put(msg.DataType, security)));
 
-						Trader.NewSecurity += security => _securitiesWindow.SecurityPicker.Securities.Add(security);
-						Trader.NewTrade += trade => _tradesWindow.TradeGrid.Trades.Add(trade);
-						Trader.NewOrder += order => _ordersWindow.OrderGrid.Orders.Add(order);
-						Trader.NewMyTrade += trade => _myTradesWindow.TradeGrid.Trades.Add(trade);
-						Trader.NewOrderLogItem += item => _ordersLogWindow.AddOperation(item);
+						Trader.NewSecurity += _securitiesWindow.SecurityPicker.Securities.Add;
+						Trader.NewTrade += _tradesWindow.TradeGrid.Trades.Add;
+						Trader.NewOrder += _ordersWindow.OrderGrid.Orders.Add;
+						Trader.NewMyTrade += _myTradesWindow.TradeGrid.Trades.Add;
+						Trader.NewOrderLogItem += _ordersLogWindow.OrderLogGrid.LogItems.Add;
 
-						Trader.NewPortfolio += portfolio => _portfoliosWindow.PortfolioGrid.Portfolios.Add(portfolio);
-						Trader.NewPosition += position => _portfoliosWindow.PortfolioGrid.Positions.Add(position);
+						Trader.NewPortfolio += _portfoliosWindow.PortfolioGrid.Portfolios.Add;
+						Trader.NewPosition += _portfoliosWindow.PortfolioGrid.Positions.Add;
 
 						// подписываемся на событие о неудачной регистрации заявок
 						Trader.OrderRegisterFailed += _ordersWindow.OrderGrid.AddRegistrationFail;
@@ -177,6 +201,35 @@ namespace SamplePlaza
 
 						// устанавливаем поставщик маркет-данных
 						_securitiesWindow.SecurityPicker.MarketDataProvider = Trader;
+
+						if (IsStorage.IsChecked == true)
+						{
+							revisionManager.Tables.Clear();
+
+							// запоминаем настроенный адаптер, так как InitializeStorage полностью очищает ранее осуществленные настройки
+							var plazaAdaprer = Trader.Adapter.InnerAdapters.OfType<PlazaMessageAdapter>().First();
+
+							Trader.InitializeStorage(_entityRegistry, _storageRegistry, _snapshotRegistry);
+
+							Trader.Adapter.InnerAdapters.Add(plazaAdaprer);
+
+							try
+							{
+								_entityRegistry.Init();
+							}
+							catch (Exception ex)
+							{
+								MessageBox.Show(this, ex.ToString());
+							}
+
+							Trader.StorageAdapter.Format = StorageFormats.Csv;
+							Trader.StorageAdapter.DaysLoad = TimeSpan.FromDays(3);
+							Trader.LookupAll();
+
+							_snapshotRegistry.Init();
+
+							ConfigManager.RegisterService<IExchangeInfoProvider>(new StorageExchangeInfoProvider(_entityRegistry));
+						}
 					}
 
 					Trader.Connect();
@@ -212,7 +265,8 @@ namespace SamplePlaza
 
 			ShowOrdersLog.IsEnabled = isConnected;
 
-			IsCGate.IsEnabled = IsFastRepl.IsEnabled = IsAutorization.IsEnabled = Tables.IsEnabled = !isConnected;
+			IsCGate.IsEnabled = IsDemo.IsEnabled = IsStorage.IsEnabled = IsFastRepl.IsEnabled
+				= IsAutorization.IsEnabled = Tables.IsEnabled = !isConnected;
 		}
 
 		private void ShowSecuritiesClick(object sender, RoutedEventArgs e)

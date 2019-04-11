@@ -20,7 +20,7 @@ namespace StockSharp.Algo.Indicators
 	using StockSharp.Localization;
 
 	/// <summary>
-	/// Chande Momentum Oscillator.
+	/// Chande Momentum Oscillator.
 	/// </summary>
 	[DisplayName("CMO")]
 	[DescriptionLoc(LocalizedStrings.Str759Key)]
@@ -81,7 +81,7 @@ namespace StockSharp.Algo.Indicators
 			var upValue = _cmoUp.Process(input.SetValue(this, delta > 0 ? delta : 0m)).GetValue<decimal>();
 			var downValue = _cmoDn.Process(input.SetValue(this, delta > 0 ? 0m : -delta)).GetValue<decimal>();
 
-			if(input.IsFinal)
+			if (input.IsFinal)
 				_last = newValue;
 
 			var value = (upValue + downValue) == 0 ? 0 : 100m * (upValue - downValue) / (upValue + downValue);
